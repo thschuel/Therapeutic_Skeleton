@@ -63,9 +63,6 @@ public class Skeleton {
 	private PVector	rMP = new PVector(); // MirrorPlane in HNF: r*n0-d=0
 	private PVector	n0MP = new PVector();
 	private float dMP = 0.0f;
-	private PVector	rBFP = new PVector(); // Best Fitting Plane in HNF: r*n0-d=0
-	private PVector	n0BFP = new PVector();
-	private float dBFP = 0.0f;
 	
 	// setup variables
 	protected boolean localCoordSys = true;
@@ -392,33 +389,22 @@ public class Skeleton {
 	
 	// mirror joints
 	private void mirrorOrientationMatrix (PMatrix3D matrix) {
-//		PApplet.println("x1:"+matrix.m00+" y1:"+matrix.m01+" z1:"+matrix.m02+" t1:"+matrix.m03);
-//		PApplet.println("x2:"+matrix.m10+" y2:"+matrix.m11+" z2:"+matrix.m12+" t2:"+matrix.m13);
-//		PApplet.println("x3:"+matrix.m20+" y3:"+matrix.m21+" z3:"+matrix.m22+" t3:"+matrix.m23);
-//		PApplet.println("x4:"+matrix.m30+" y4:"+matrix.m31+" z4:"+matrix.m32+" t4:"+matrix.m33);
-		
 		PVector x = new PVector(matrix.m00,matrix.m10,matrix.m20);
 		PVector y = new PVector(matrix.m01,matrix.m11,matrix.m21);
 		PVector z = new PVector(matrix.m02,matrix.m12,matrix.m22);
-		
 		x.add(rMP);
 		y.add(rMP);
 		z.add(rMP);
-		
 		float distanceToMP = PVector.dot(x,n0MP) - dMP;
 		x.set(PVector.add(x,PVector.mult(n0MP,-2*distanceToMP)));
 		distanceToMP = PVector.dot(y,n0MP) - dMP;
 		y.set(PVector.add(y,PVector.mult(n0MP,-2*distanceToMP)));
 		distanceToMP = PVector.dot(z,n0MP) - dMP;
 		z.set(PVector.add(z,PVector.mult(n0MP,-2*distanceToMP)));
-		
 		x.sub(rMP);
 		y.sub(rMP);
 		z.sub(rMP);
-		matrix.set(-x.x      ,y.x       ,z.x       ,matrix.m03,
-				   -x.y      ,y.y       ,z.y       ,matrix.m13,
-				   -x.z      ,y.z       ,z.z       ,matrix.m23,
-				   matrix.m30,matrix.m31,matrix.m32,matrix.m33);		
+		matrix.set(-x.x,y.x,z.x,matrix.m03,-x.y,y.y,z.y,matrix.m13,-x.z,y.z,z.z,matrix.m23,matrix.m30,matrix.m31,matrix.m32,matrix.m33);		
 	}
 	
 	private void calculateMirrorPlane () {
@@ -426,16 +412,13 @@ public class Skeleton {
 		// HNF: r*n0-d = 0
 		PVector r;
 		PVector n0;
-		
 		// r is position vector of any point in the plane
 		r = skeletonPoints[Skeleton.TORSO];
-		
 		// n0 is cross product of two vectors in the plane
 		PVector temp1 = PVector.sub(skeletonPoints[Skeleton.LEFT_SHOULDER],r);
 		PVector temp2 = PVector.sub(skeletonPoints[Skeleton.RIGHT_SHOULDER],r);
 		n0 = temp1.cross(temp2);
 		n0.normalize();
-		
 		// mirrorPlane is orthogonal to body plane and contains the line between torso and neck
 		// calculate mirrorPlane in HNF: r*n0-d = 0
 		rMP = r; // r is always set to position of the torso
@@ -443,76 +426,6 @@ public class Skeleton {
 		n0MP.normalize();
 		dMP = PVector.dot(rMP,n0MP);
 		mirrorPlaneCalculated = true;
-		
-	}
-
-	private void calculateMirrorPlaneOld () {
-		// store neck-, head-, torso-, shoulder-, hip-vectors for calculation of mirror plane
-		bodyPoints[0] = skeletonPoints[Skeleton.HEAD];
-		bodyPoints[1] = skeletonPoints[Skeleton.NECK];
-		bodyPoints[2] = skeletonPoints[Skeleton.TORSO];
-		bodyPoints[3] = skeletonPoints[Skeleton.LEFT_SHOULDER];
-		bodyPoints[4] = skeletonPoints[Skeleton.RIGHT_SHOULDER];
-		bodyPoints[5] = skeletonPoints[Skeleton.LEFT_HIP];
-		bodyPoints[6] = skeletonPoints[Skeleton.RIGHT_HIP];
-		
-		// calculate all possible planes formed by bodyPoints in HNF (headVector not used for now)
-		// HNF: r*n0-d = 0
-		PVector[] r = new PVector[20];
-		PVector[] n0 = new PVector[20];
-		float[] d = new float[20];
-		float[] quadDistances = new float[20];
-		int index = 0;
-		
-		PVector temp1 = new PVector();
-		PVector temp2 = new PVector();
-		
-		for (int i=1; i<7; i++) { // skip headVector for now
-			for (int j=i+1; j<6; j++) {
-				for (int k=j+1; k<7; k++) {
-					temp1.set(PVector.sub(bodyPoints[j],bodyPoints[i]));
-					temp2.set(PVector.sub(bodyPoints[k],bodyPoints[i]));
-					
-					n0[index] = temp1.cross(temp2);
-					
-					// skip if bodyPoints form a straight line
-					if (n0[index].x == 0.0f && n0[index].y == 0.0f && n0[index].z == 0.0f) 
-						continue;
-					
-					n0[index].normalize();
-					r[index] = bodyPoints[i];
-					d[index] = r[index].dot(n0[index]);	
-					
-					// sum quad distances of bodyPoints to plane
-					quadDistances[index] = 0.0f;
-					for (int l=1; l<7; l++) {
-						quadDistances[index] += PApplet.sq(bodyPoints[l].dot(n0[index]) - d[index]);
-					}
-					
-					index++;
-				}
-			}
-		}
-		
-		if (index > 0) {
-			// find best fitting plane (plane with minimal summed distances of bodyPoints)
-			int indexBestFittingPlane = 0;
-			for (int i=1; i<index; i++) {
-				if (quadDistances[i] < quadDistances[indexBestFittingPlane]) {
-					indexBestFittingPlane = i;
-				}
-			}
-			// store bestFittingPlane
-			n0BFP = n0[indexBestFittingPlane];
-			rBFP = r[indexBestFittingPlane];
-			dBFP = d[indexBestFittingPlane];
-			// mirrorPlane is orthogonal to bestFittingPlane and contains the line between torso and neck
-			// calculate mirrorPlane in HNF: r*n0-d = 0
-			n0MP = n0BFP.cross(PVector.sub(bodyPoints[1],bodyPoints[2]));
-			n0MP.normalize();
-			rMP = bodyPoints[1]; // r is always set to position of the neck
-			dMP = PVector.dot(rMP,n0MP);
-		}		
 	}
 
 	private boolean valueBetween (float val, float lowerBound, float upperBound) {
