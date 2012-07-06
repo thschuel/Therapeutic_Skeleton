@@ -46,7 +46,6 @@ public class Skeleton {
 	protected PVector[] skeletonPoints = new PVector[15]; 
 	protected float[] confidenceSkeletonPoints = new float[15];
 	// stores skeleton Points in 3d Space, local coordsys (neck is origin)
-	protected static final boolean calculateAndTransfromToLocalCoordSys = true;
 	protected PVector[] skeletonPointsLocal = new PVector[15]; 
 	protected PVector origin;
 	protected PVector orientationX, orientationY, orientationZ;
@@ -69,6 +68,7 @@ public class Skeleton {
 	private float dBFP = 0.0f;
 	
 	// setup variables
+	protected boolean localCoordSys = true;
 	protected boolean fullBodyTracking = false;
 	protected short mirrorTherapy = MIRROR_THERAPY_OFF;
 	
@@ -80,14 +80,13 @@ public class Skeleton {
 	// skeleton of user
 	public int userId;
 	
-	public Skeleton (SimpleOpenNI _kinect, int _userId, boolean _fullBodyTracking, short _mirrorTherapy) {
+	public Skeleton (SimpleOpenNI _kinect, int _userId, boolean _fullBodyTracking, boolean _localCoordSys, short _mirrorTherapy) {
 		kinect = _kinect;
 		userId = _userId;
 		fullBodyTracking = _fullBodyTracking;
+		localCoordSys = _localCoordSys;
 		if (_mirrorTherapy >= MIRROR_THERAPY_OFF && _mirrorTherapy <= MIRROR_THERAPY_RIGHT) 
 			mirrorTherapy = _mirrorTherapy;
-		else
-			mirrorTherapy = MIRROR_THERAPY_OFF;
 		for (int i=0; i<15; i++){
 			skeletonPoints[i] = new PVector();
 			skeletonPointsLocal[i] = new PVector();
@@ -101,133 +100,19 @@ public class Skeleton {
 	public void update () {
 		isUpdated = false;
 		localCoordSysCalculated = false;
+		mirrorPlaneCalculated = false;
 		
-		confidenceSkeletonPoints[Skeleton.HEAD] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_HEAD,skeletonPoints[Skeleton.HEAD]);
-		confidenceJointOrientations[Skeleton.HEAD] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_HEAD,jointOrientations[Skeleton.HEAD]);
-		confidenceSkeletonPoints[Skeleton.NECK] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_NECK,skeletonPoints[Skeleton.NECK]);
-		confidenceJointOrientations[Skeleton.NECK] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_NECK,jointOrientations[Skeleton.NECK]);
-		confidenceSkeletonPoints[Skeleton.LEFT_SHOULDER] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_SHOULDER,skeletonPoints[Skeleton.LEFT_SHOULDER]);
-		confidenceJointOrientations[Skeleton.LEFT_SHOULDER] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_LEFT_SHOULDER,jointOrientations[Skeleton.LEFT_SHOULDER]);
-		confidenceSkeletonPoints[Skeleton.RIGHT_SHOULDER] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_SHOULDER,skeletonPoints[Skeleton.RIGHT_SHOULDER]);
-		confidenceJointOrientations[Skeleton.RIGHT_SHOULDER] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_SHOULDER,jointOrientations[Skeleton.RIGHT_SHOULDER]);
-		confidenceSkeletonPoints[Skeleton.TORSO] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_TORSO,skeletonPoints[Skeleton.TORSO]);
-		confidenceJointOrientations[Skeleton.TORSO] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_TORSO,jointOrientations[Skeleton.TORSO]);
-		if (fullBodyTracking) {
-			confidenceSkeletonPoints[Skeleton.LEFT_HIP] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HIP,skeletonPoints[Skeleton.LEFT_HIP]);
-			confidenceJointOrientations[Skeleton.LEFT_HIP] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HIP,jointOrientations[Skeleton.LEFT_HIP]);
-			confidenceSkeletonPoints[Skeleton.LEFT_KNEE] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_KNEE,skeletonPoints[Skeleton.LEFT_KNEE]);
-			confidenceJointOrientations[Skeleton.LEFT_KNEE] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_LEFT_KNEE,jointOrientations[Skeleton.LEFT_KNEE]);
-			confidenceSkeletonPoints[Skeleton.LEFT_FOOT] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_FOOT,skeletonPoints[Skeleton.LEFT_FOOT]);
-			confidenceJointOrientations[Skeleton.LEFT_FOOT] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_LEFT_FOOT,jointOrientations[Skeleton.LEFT_FOOT]);
-			confidenceSkeletonPoints[Skeleton.RIGHT_HIP] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HIP,skeletonPoints[Skeleton.RIGHT_HIP]);
-			confidenceJointOrientations[Skeleton.RIGHT_HIP] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HIP,jointOrientations[Skeleton.RIGHT_HIP]);
-			confidenceSkeletonPoints[Skeleton.RIGHT_KNEE] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_KNEE,skeletonPoints[Skeleton.RIGHT_KNEE]);
-			confidenceJointOrientations[Skeleton.RIGHT_KNEE] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_KNEE,jointOrientations[Skeleton.RIGHT_KNEE]);
-			confidenceSkeletonPoints[Skeleton.RIGHT_FOOT] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_FOOT,skeletonPoints[Skeleton.RIGHT_FOOT]);
-			confidenceJointOrientations[Skeleton.RIGHT_FOOT] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_FOOT,jointOrientations[Skeleton.RIGHT_FOOT]);
+		updateJointPositions();
+		updateJointOrientations();
+		
+		if (mirrorTherapy != MIRROR_THERAPY_OFF) {
+			calculateMirrorPlane();
+			updateMirroredJointPositions();
+			updateMirroredJointOrientations();
 		}
-			
-		switch (mirrorTherapy) {
-			case MIRROR_THERAPY_OFF:
-				confidenceSkeletonPoints[Skeleton.LEFT_ELBOW] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_ELBOW,skeletonPoints[Skeleton.LEFT_ELBOW]);
-				confidenceJointOrientations[Skeleton.LEFT_ELBOW] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_LEFT_ELBOW,jointOrientations[Skeleton.LEFT_ELBOW]);
-				confidenceSkeletonPoints[Skeleton.LEFT_HAND] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HAND,skeletonPoints[Skeleton.LEFT_HAND]);
-				confidenceJointOrientations[Skeleton.LEFT_HAND] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HAND,jointOrientations[Skeleton.LEFT_HAND]);
-				confidenceSkeletonPoints[Skeleton.RIGHT_ELBOW] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_ELBOW,skeletonPoints[Skeleton.RIGHT_ELBOW]);
-				confidenceJointOrientations[Skeleton.RIGHT_ELBOW] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_ELBOW,jointOrientations[Skeleton.RIGHT_ELBOW]);
-				confidenceSkeletonPoints[Skeleton.RIGHT_HAND] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HAND,skeletonPoints[Skeleton.RIGHT_HAND]);
-				confidenceJointOrientations[Skeleton.RIGHT_HAND] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HAND,jointOrientations[Skeleton.RIGHT_HAND]);
-				mirrorPlaneCalculated = false;
-				break;
-				
-			case MIRROR_THERAPY_LEFT:
-				// left body side will be mirrored to right body side
-				confidenceSkeletonPoints[Skeleton.LEFT_ELBOW] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_ELBOW,skeletonPoints[Skeleton.LEFT_ELBOW]);
-				confidenceJointOrientations[Skeleton.LEFT_ELBOW] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_LEFT_ELBOW,jointOrientations[Skeleton.LEFT_ELBOW]);
-				confidenceSkeletonPoints[Skeleton.LEFT_HAND] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HAND,skeletonPoints[Skeleton.LEFT_HAND]);
-				confidenceJointOrientations[Skeleton.LEFT_HAND] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HAND,jointOrientations[Skeleton.LEFT_HAND]);
-				
-				// calculates and stores mirror plane in HNF for mirroring joints
-				calculateMirrorPlane(); 
-				
-				// mirror orientation of left shoulder to right shoulder
-				jointOrientations[Skeleton.RIGHT_SHOULDER].set(jointOrientations[Skeleton.LEFT_SHOULDER]);
-				mirrorOrientationMatrix(jointOrientations[Skeleton.RIGHT_SHOULDER]);
-				confidenceJointOrientations[Skeleton.RIGHT_SHOULDER] = confidenceJointOrientations[Skeleton.LEFT_SHOULDER];
-				
-				// mirror left elbow to right elbow
-				float lDistanceToMP = PVector.dot(skeletonPoints[Skeleton.LEFT_ELBOW],n0MP) - dMP;
-				skeletonPoints[Skeleton.RIGHT_ELBOW].set(PVector.add(skeletonPoints[Skeleton.LEFT_ELBOW],PVector.mult(n0MP,-2*lDistanceToMP)));
-				confidenceSkeletonPoints[Skeleton.RIGHT_ELBOW] = confidenceSkeletonPoints[Skeleton.LEFT_ELBOW];
-				// mirror joint orientations
-				jointOrientations[Skeleton.RIGHT_ELBOW].set(jointOrientations[Skeleton.LEFT_ELBOW]);
-				mirrorOrientationMatrix(jointOrientations[Skeleton.RIGHT_ELBOW]);
-				confidenceJointOrientations[Skeleton.RIGHT_ELBOW] = confidenceJointOrientations[Skeleton.LEFT_ELBOW];
-				
-				// mirror left hand to right hand
-				lDistanceToMP = PVector.dot(skeletonPoints[Skeleton.LEFT_HAND],n0MP) - dMP;
-				skeletonPoints[Skeleton.RIGHT_HAND].set(PVector.add(skeletonPoints[Skeleton.LEFT_HAND],PVector.mult(n0MP,-2*lDistanceToMP)));
-				confidenceSkeletonPoints[Skeleton.RIGHT_HAND] = confidenceSkeletonPoints[Skeleton.LEFT_HAND];
-				// mirror joint orientations
-				jointOrientations[Skeleton.RIGHT_HAND] = jointOrientations[Skeleton.LEFT_HAND];
-				mirrorOrientationMatrix(jointOrientations[Skeleton.RIGHT_HAND]);
-				confidenceJointOrientations[Skeleton.RIGHT_HAND] = confidenceJointOrientations[Skeleton.LEFT_HAND];
-				break;
-				
-			case MIRROR_THERAPY_RIGHT:
-				// right body side will be mirrored to left body side
-				confidenceSkeletonPoints[Skeleton.RIGHT_ELBOW] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_ELBOW,skeletonPoints[Skeleton.RIGHT_ELBOW]);
-				confidenceJointOrientations[Skeleton.RIGHT_ELBOW] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_ELBOW,jointOrientations[Skeleton.RIGHT_ELBOW]);
-				confidenceSkeletonPoints[Skeleton.RIGHT_HAND] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HAND,skeletonPoints[Skeleton.RIGHT_HAND]);
-				confidenceJointOrientations[Skeleton.RIGHT_HAND] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HAND,jointOrientations[Skeleton.RIGHT_HAND]);
-				
-				// calculates and stores mirror plane in HNF for mirroring joints
-				calculateMirrorPlane();  
-				
-				// mirror orientation of left shoulder to right shoulder
-				jointOrientations[Skeleton.LEFT_SHOULDER].set(jointOrientations[Skeleton.RIGHT_SHOULDER]);
-				mirrorOrientationMatrix(jointOrientations[Skeleton.LEFT_SHOULDER]);
-				confidenceJointOrientations[Skeleton.LEFT_SHOULDER] = confidenceJointOrientations[Skeleton.RIGHT_SHOULDER];
-	
-				// mirror right elbow to left elbow
-				float rDistanceToMP = PVector.dot(skeletonPoints[Skeleton.RIGHT_ELBOW],n0MP) - dMP;
-				skeletonPoints[Skeleton.LEFT_ELBOW].set(PVector.add(skeletonPoints[Skeleton.RIGHT_ELBOW],PVector.mult(n0MP,-2*rDistanceToMP)));
-				confidenceSkeletonPoints[Skeleton.LEFT_ELBOW] = confidenceSkeletonPoints[Skeleton.RIGHT_ELBOW];
-				// mirror joint orientations
-				jointOrientations[Skeleton.LEFT_ELBOW] = jointOrientations[Skeleton.RIGHT_ELBOW]; 
-				mirrorOrientationMatrix(jointOrientations[Skeleton.LEFT_ELBOW]);
-				confidenceJointOrientations[Skeleton.LEFT_ELBOW] = confidenceJointOrientations[Skeleton.RIGHT_ELBOW];
-				
-				// mirror right hand to left hand
-				rDistanceToMP = PVector.dot(skeletonPoints[Skeleton.RIGHT_HAND],n0MP) - dMP;
-				skeletonPoints[Skeleton.LEFT_HAND].set(PVector.add(skeletonPoints[Skeleton.RIGHT_HAND],PVector.mult(n0MP,-2*rDistanceToMP)));
-				confidenceSkeletonPoints[Skeleton.LEFT_HAND] = confidenceSkeletonPoints[Skeleton.RIGHT_HAND];
-				// mirror joint orientations
-				jointOrientations[Skeleton.LEFT_HAND] = jointOrientations[Skeleton.RIGHT_HAND];
-				mirrorOrientationMatrix(jointOrientations[Skeleton.LEFT_HAND]);
-				confidenceJointOrientations[Skeleton.LEFT_HAND] = confidenceJointOrientations[Skeleton.RIGHT_HAND];
-				break;
-		}	
-		
-		if (calculateAndTransfromToLocalCoordSys) {
+		if (localCoordSys) {
 			calculateLocalCoordSys();
-			skeletonPointsLocal[Skeleton.HEAD] = getLocalVector(skeletonPoints[Skeleton.HEAD]);
-			skeletonPointsLocal[Skeleton.NECK] = getLocalVector(skeletonPoints[Skeleton.NECK]);
-			skeletonPointsLocal[Skeleton.TORSO] = getLocalVector(skeletonPoints[Skeleton.TORSO]);
-			skeletonPointsLocal[Skeleton.LEFT_SHOULDER] = getLocalVector(skeletonPoints[Skeleton.LEFT_SHOULDER]);
-			skeletonPointsLocal[Skeleton.RIGHT_SHOULDER] = getLocalVector(skeletonPoints[Skeleton.RIGHT_SHOULDER]);
-			skeletonPointsLocal[Skeleton.LEFT_ELBOW] = getLocalVector(skeletonPoints[Skeleton.LEFT_ELBOW]);
-			skeletonPointsLocal[Skeleton.RIGHT_ELBOW] = getLocalVector(skeletonPoints[Skeleton.RIGHT_ELBOW]);
-			skeletonPointsLocal[Skeleton.LEFT_HAND] = getLocalVector(skeletonPoints[Skeleton.LEFT_HAND]);
-			skeletonPointsLocal[Skeleton.RIGHT_HAND] = getLocalVector(skeletonPoints[Skeleton.RIGHT_HAND]);
-			if (fullBodyTracking) {
-				skeletonPointsLocal[Skeleton.LEFT_HIP] = getLocalVector(skeletonPoints[Skeleton.LEFT_HIP]);
-				skeletonPointsLocal[Skeleton.LEFT_KNEE] = getLocalVector(skeletonPoints[Skeleton.LEFT_KNEE]);
-				skeletonPointsLocal[Skeleton.LEFT_FOOT] = getLocalVector(skeletonPoints[Skeleton.LEFT_FOOT]);
-				skeletonPointsLocal[Skeleton.RIGHT_HIP] = getLocalVector(skeletonPoints[Skeleton.RIGHT_HIP]);
-				skeletonPointsLocal[Skeleton.RIGHT_KNEE] = getLocalVector(skeletonPoints[Skeleton.RIGHT_KNEE]);
-				skeletonPointsLocal[Skeleton.RIGHT_FOOT] = getLocalVector(skeletonPoints[Skeleton.RIGHT_FOOT]);
-			}
+			transformToLocalCoordSys();
 		}
 		
 		isUpdated = true;
@@ -253,6 +138,12 @@ public class Skeleton {
 		return fullBodyTracking;
 	}
 	
+	public void setCalculateLocalCoordSys (boolean _localCoordSys) {
+		localCoordSys = _localCoordSys;
+	}
+	public boolean getCalculateLocalCoordSys () {
+		return localCoordSys;
+	}
 	
 	public PVector getJoint (short jointType) {
 		if (jointType >= 0 && jointType <= 14) 
@@ -405,10 +296,6 @@ public class Skeleton {
 		}
 		return false;
 	}
-	
-	private boolean valueBetween (float val, float lowerBound, float upperBound) {
-			return (val >= lowerBound && val <= upperBound);
-	}
 
 	// return angle between left arm and body axis in radians
 	public float angleBetween (short joint11, short joint12, short joint21, short joint22) {
@@ -505,7 +392,6 @@ public class Skeleton {
 	
 	// mirror joints
 	private void mirrorOrientationMatrix (PMatrix3D matrix) {
-		
 //		PApplet.println("x1:"+matrix.m00+" y1:"+matrix.m01+" z1:"+matrix.m02+" t1:"+matrix.m03);
 //		PApplet.println("x2:"+matrix.m10+" y2:"+matrix.m11+" z2:"+matrix.m12+" t2:"+matrix.m13);
 //		PApplet.println("x3:"+matrix.m20+" y3:"+matrix.m21+" z3:"+matrix.m22+" t3:"+matrix.m23);
@@ -536,7 +422,6 @@ public class Skeleton {
 	}
 	
 	private void calculateMirrorPlane () {
-		
 		// calculate body plane of Shoulder and Torso points in HNF
 		// HNF: r*n0-d = 0
 		PVector r;
@@ -562,7 +447,6 @@ public class Skeleton {
 	}
 
 	private void calculateMirrorPlaneOld () {
-	
 		// store neck-, head-, torso-, shoulder-, hip-vectors for calculation of mirror plane
 		bodyPoints[0] = skeletonPoints[Skeleton.HEAD];
 		bodyPoints[1] = skeletonPoints[Skeleton.NECK];
@@ -628,8 +512,135 @@ public class Skeleton {
 			n0MP.normalize();
 			rMP = bodyPoints[1]; // r is always set to position of the neck
 			dMP = PVector.dot(rMP,n0MP);
+		}		
+	}
+
+	private boolean valueBetween (float val, float lowerBound, float upperBound) {
+			return (val >= lowerBound && val <= upperBound);
+	}
+	
+	// -----------------------------------------------------------------
+	// update skeleton methods
+	private void updateJointPositions () {
+		confidenceSkeletonPoints[Skeleton.HEAD] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_HEAD,skeletonPoints[Skeleton.HEAD]);
+		confidenceSkeletonPoints[Skeleton.NECK] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_NECK,skeletonPoints[Skeleton.NECK]);
+		confidenceSkeletonPoints[Skeleton.LEFT_SHOULDER] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_SHOULDER,skeletonPoints[Skeleton.LEFT_SHOULDER]);
+		confidenceSkeletonPoints[Skeleton.RIGHT_SHOULDER] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_SHOULDER,skeletonPoints[Skeleton.RIGHT_SHOULDER]);
+		confidenceSkeletonPoints[Skeleton.TORSO] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_TORSO,skeletonPoints[Skeleton.TORSO]);
+		confidenceSkeletonPoints[Skeleton.LEFT_ELBOW] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_ELBOW,skeletonPoints[Skeleton.LEFT_ELBOW]);
+		confidenceSkeletonPoints[Skeleton.LEFT_HAND] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HAND,skeletonPoints[Skeleton.LEFT_HAND]);
+		confidenceSkeletonPoints[Skeleton.RIGHT_ELBOW] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_ELBOW,skeletonPoints[Skeleton.RIGHT_ELBOW]);
+		confidenceSkeletonPoints[Skeleton.RIGHT_HAND] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HAND,skeletonPoints[Skeleton.RIGHT_HAND]);
+		if (fullBodyTracking) {
+			confidenceSkeletonPoints[Skeleton.LEFT_HIP] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HIP,skeletonPoints[Skeleton.LEFT_HIP]);
+			confidenceSkeletonPoints[Skeleton.LEFT_KNEE] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_KNEE,skeletonPoints[Skeleton.LEFT_KNEE]);
+			confidenceSkeletonPoints[Skeleton.LEFT_FOOT] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_FOOT,skeletonPoints[Skeleton.LEFT_FOOT]);
+			confidenceSkeletonPoints[Skeleton.RIGHT_HIP] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HIP,skeletonPoints[Skeleton.RIGHT_HIP]);
+			confidenceSkeletonPoints[Skeleton.RIGHT_KNEE] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_KNEE,skeletonPoints[Skeleton.RIGHT_KNEE]);
+			confidenceSkeletonPoints[Skeleton.RIGHT_FOOT] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_FOOT,skeletonPoints[Skeleton.RIGHT_FOOT]);
 		}
-		
+	}
+	
+	private void updateMirroredJointPositions () {
+		if (mirrorPlaneCalculated) {
+			switch (mirrorTherapy) {
+				case MIRROR_THERAPY_LEFT:
+					// mirror left elbow to right elbow
+					float lDistanceToMP = PVector.dot(skeletonPoints[Skeleton.LEFT_ELBOW],n0MP) - dMP;
+					skeletonPoints[Skeleton.RIGHT_ELBOW].set(PVector.add(skeletonPoints[Skeleton.LEFT_ELBOW],PVector.mult(n0MP,-2*lDistanceToMP)));
+					confidenceSkeletonPoints[Skeleton.RIGHT_ELBOW] = confidenceSkeletonPoints[Skeleton.LEFT_ELBOW];
+					// mirror left hand to right hand
+					lDistanceToMP = PVector.dot(skeletonPoints[Skeleton.LEFT_HAND],n0MP) - dMP;
+					skeletonPoints[Skeleton.RIGHT_HAND].set(PVector.add(skeletonPoints[Skeleton.LEFT_HAND],PVector.mult(n0MP,-2*lDistanceToMP)));
+					confidenceSkeletonPoints[Skeleton.RIGHT_HAND] = confidenceSkeletonPoints[Skeleton.LEFT_HAND];
+					break;
+				case MIRROR_THERAPY_RIGHT:
+					// mirror right elbow to left elbow
+					float rDistanceToMP = PVector.dot(skeletonPoints[Skeleton.RIGHT_ELBOW],n0MP) - dMP;
+					skeletonPoints[Skeleton.LEFT_ELBOW].set(PVector.add(skeletonPoints[Skeleton.RIGHT_ELBOW],PVector.mult(n0MP,-2*rDistanceToMP)));
+					confidenceSkeletonPoints[Skeleton.LEFT_ELBOW] = confidenceSkeletonPoints[Skeleton.RIGHT_ELBOW];
+					// mirror right hand to left hand
+					rDistanceToMP = PVector.dot(skeletonPoints[Skeleton.RIGHT_HAND],n0MP) - dMP;
+					skeletonPoints[Skeleton.LEFT_HAND].set(PVector.add(skeletonPoints[Skeleton.RIGHT_HAND],PVector.mult(n0MP,-2*rDistanceToMP)));
+					confidenceSkeletonPoints[Skeleton.LEFT_HAND] = confidenceSkeletonPoints[Skeleton.RIGHT_HAND];
+					break;
+			}	
+		}
+	}
+	
+	private void updateJointOrientations () {
+		confidenceJointOrientations[Skeleton.HEAD] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_HEAD,jointOrientations[Skeleton.HEAD]);
+		confidenceJointOrientations[Skeleton.NECK] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_NECK,jointOrientations[Skeleton.NECK]);
+		confidenceJointOrientations[Skeleton.LEFT_SHOULDER] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_LEFT_SHOULDER,jointOrientations[Skeleton.LEFT_SHOULDER]);
+		confidenceJointOrientations[Skeleton.RIGHT_SHOULDER] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_SHOULDER,jointOrientations[Skeleton.RIGHT_SHOULDER]);
+		confidenceJointOrientations[Skeleton.TORSO] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_TORSO,jointOrientations[Skeleton.TORSO]);
+		confidenceJointOrientations[Skeleton.LEFT_ELBOW] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_LEFT_ELBOW,jointOrientations[Skeleton.LEFT_ELBOW]);
+		confidenceJointOrientations[Skeleton.LEFT_HAND] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HAND,jointOrientations[Skeleton.LEFT_HAND]);
+		confidenceJointOrientations[Skeleton.RIGHT_ELBOW] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_ELBOW,jointOrientations[Skeleton.RIGHT_ELBOW]);
+		confidenceJointOrientations[Skeleton.RIGHT_HAND] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HAND,jointOrientations[Skeleton.RIGHT_HAND]);
+		if (fullBodyTracking) {
+			confidenceJointOrientations[Skeleton.LEFT_HIP] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HIP,jointOrientations[Skeleton.LEFT_HIP]);
+			confidenceJointOrientations[Skeleton.LEFT_KNEE] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_LEFT_KNEE,jointOrientations[Skeleton.LEFT_KNEE]);
+			confidenceJointOrientations[Skeleton.LEFT_FOOT] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_LEFT_FOOT,jointOrientations[Skeleton.LEFT_FOOT]);
+			confidenceJointOrientations[Skeleton.RIGHT_HIP] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HIP,jointOrientations[Skeleton.RIGHT_HIP]);
+			confidenceJointOrientations[Skeleton.RIGHT_KNEE] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_KNEE,jointOrientations[Skeleton.RIGHT_KNEE]);
+			confidenceJointOrientations[Skeleton.RIGHT_FOOT] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_FOOT,jointOrientations[Skeleton.RIGHT_FOOT]);
+		}
+	}
+	
+	private void updateMirroredJointOrientations () {
+		if (mirrorPlaneCalculated) {
+			switch (mirrorTherapy) {
+				case MIRROR_THERAPY_LEFT:
+					// mirror orientation of left shoulder to right shoulder
+					jointOrientations[Skeleton.RIGHT_SHOULDER].set(jointOrientations[Skeleton.LEFT_SHOULDER]);
+					mirrorOrientationMatrix(jointOrientations[Skeleton.RIGHT_SHOULDER]);
+					confidenceJointOrientations[Skeleton.RIGHT_SHOULDER] = confidenceJointOrientations[Skeleton.LEFT_SHOULDER];
+					// mirror orientation of left elbow to right elbow
+					jointOrientations[Skeleton.RIGHT_ELBOW].set(jointOrientations[Skeleton.LEFT_ELBOW]);
+					mirrorOrientationMatrix(jointOrientations[Skeleton.RIGHT_ELBOW]);
+					confidenceJointOrientations[Skeleton.RIGHT_ELBOW] = confidenceJointOrientations[Skeleton.LEFT_ELBOW];
+					// mirror orientation of left hand to right hand
+					jointOrientations[Skeleton.RIGHT_HAND] = jointOrientations[Skeleton.LEFT_HAND];
+					mirrorOrientationMatrix(jointOrientations[Skeleton.RIGHT_HAND]);
+					confidenceJointOrientations[Skeleton.RIGHT_HAND] = confidenceJointOrientations[Skeleton.LEFT_HAND];
+					break;
+				case MIRROR_THERAPY_RIGHT:
+					// mirror orientation of right  shoulder to left shoulder
+					jointOrientations[Skeleton.LEFT_SHOULDER].set(jointOrientations[Skeleton.RIGHT_SHOULDER]);
+					mirrorOrientationMatrix(jointOrientations[Skeleton.LEFT_SHOULDER]);
+					confidenceJointOrientations[Skeleton.LEFT_SHOULDER] = confidenceJointOrientations[Skeleton.RIGHT_SHOULDER];
+					// mirror orientation of right  elbow to left elbow
+					jointOrientations[Skeleton.LEFT_ELBOW] = jointOrientations[Skeleton.RIGHT_ELBOW]; 
+					mirrorOrientationMatrix(jointOrientations[Skeleton.LEFT_ELBOW]);
+					confidenceJointOrientations[Skeleton.LEFT_ELBOW] = confidenceJointOrientations[Skeleton.RIGHT_ELBOW];
+					// mirror orientation of right  hand to left hand
+					jointOrientations[Skeleton.LEFT_HAND] = jointOrientations[Skeleton.RIGHT_HAND];
+					mirrorOrientationMatrix(jointOrientations[Skeleton.LEFT_HAND]);
+					confidenceJointOrientations[Skeleton.LEFT_HAND] = confidenceJointOrientations[Skeleton.RIGHT_HAND];
+					break;
+			}
+		}	
+	}
+	
+	private void transformToLocalCoordSys () {
+		skeletonPointsLocal[Skeleton.HEAD] = getLocalVector(skeletonPoints[Skeleton.HEAD]);
+		skeletonPointsLocal[Skeleton.NECK] = getLocalVector(skeletonPoints[Skeleton.NECK]);
+		skeletonPointsLocal[Skeleton.TORSO] = getLocalVector(skeletonPoints[Skeleton.TORSO]);
+		skeletonPointsLocal[Skeleton.LEFT_SHOULDER] = getLocalVector(skeletonPoints[Skeleton.LEFT_SHOULDER]);
+		skeletonPointsLocal[Skeleton.RIGHT_SHOULDER] = getLocalVector(skeletonPoints[Skeleton.RIGHT_SHOULDER]);
+		skeletonPointsLocal[Skeleton.LEFT_ELBOW] = getLocalVector(skeletonPoints[Skeleton.LEFT_ELBOW]);
+		skeletonPointsLocal[Skeleton.RIGHT_ELBOW] = getLocalVector(skeletonPoints[Skeleton.RIGHT_ELBOW]);
+		skeletonPointsLocal[Skeleton.LEFT_HAND] = getLocalVector(skeletonPoints[Skeleton.LEFT_HAND]);
+		skeletonPointsLocal[Skeleton.RIGHT_HAND] = getLocalVector(skeletonPoints[Skeleton.RIGHT_HAND]);
+		if (fullBodyTracking) {
+			skeletonPointsLocal[Skeleton.LEFT_HIP] = getLocalVector(skeletonPoints[Skeleton.LEFT_HIP]);
+			skeletonPointsLocal[Skeleton.LEFT_KNEE] = getLocalVector(skeletonPoints[Skeleton.LEFT_KNEE]);
+			skeletonPointsLocal[Skeleton.LEFT_FOOT] = getLocalVector(skeletonPoints[Skeleton.LEFT_FOOT]);
+			skeletonPointsLocal[Skeleton.RIGHT_HIP] = getLocalVector(skeletonPoints[Skeleton.RIGHT_HIP]);
+			skeletonPointsLocal[Skeleton.RIGHT_KNEE] = getLocalVector(skeletonPoints[Skeleton.RIGHT_KNEE]);
+			skeletonPointsLocal[Skeleton.RIGHT_FOOT] = getLocalVector(skeletonPoints[Skeleton.RIGHT_FOOT]);
+		}
 	}
 	
 }
