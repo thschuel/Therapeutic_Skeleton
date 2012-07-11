@@ -197,12 +197,131 @@ public class Skeleton {
 		else
 			return 0f;
 	}
-	
+
+	/** returns the origin of the local coordsys. Equals Torso Vector. works only if localCoordSys has been calculated
+	 *  @return the origin. 0-vector if localCoordSys has not been calculated */
 	public PVector getOrigin () {
 		if (localCoordSysCalculated)
 			return origin;
 		else
 			return new PVector();
+	}
+
+	/** returns the local x coordinate vector. works only if localCoordSys has been calculated
+	 *  @return the local vector. 0-vector if localCoordSys has not been calculated */
+	public PVector getOrientationX () {
+		if (localCoordSysCalculated)
+			return orientationX;
+		else
+			return new PVector();
+	}
+	/** returns the angle between the local x vector and the global x vector. works only if localCoordSys has been calculated
+	 *  @return the angle, float between 0 and PI. 0f when localCoordSys has not been calculated */
+	public float getOrientationAlpha () {
+		if (localCoordSysCalculated)
+			return PVector.angleBetween(orientationX,new PVector(1,0,0));
+		else
+			return 0f;
+	}
+	/** returns the local y coordinate vector. works only if localCoordSys has been calculated
+	 *  @return the local vector. 0-vector if localCoordSys has not been calculated */
+	public PVector getOrientationY () {
+		if (localCoordSysCalculated)
+			return orientationY;
+		else
+			return new PVector();
+	}
+	/** returns the angle between the local y vector and the global y vector. works only if localCoordSys has been calculated
+	 *  @return the angle, float between 0 and PI. 0f when localCoordSys has not been calculated */
+	public float getOrientationBeta () {
+		if (localCoordSysCalculated)
+			return PVector.angleBetween(orientationY,new PVector(0,1,0));
+		else
+			return 0f;
+	}
+	/** returns the local z coordinate vector. works only if localCoordSys has been calculated
+	 *  @return the local vector. 0-vector if localCoordSys has not been calculated */
+	public PVector getOrientationZ () {
+		if (localCoordSysCalculated)
+			return orientationZ;
+		else
+			return new PVector();
+	}
+	/** returns the angle between the local z vector and the global z vector. works only if localCoordSys has been calculated
+	 *  @return the angle, float between 0 and PI. 0f when localCoordSys has not been calculated*/
+	public float getOrientationGamma () {
+		if (localCoordSysCalculated) {
+			return PVector.angleBetween(orientationZ,new PVector(0,0,1));
+		} else
+			return 0f;
+	}
+	
+	/** returns the angle between two limb-vectors
+	 *  @param joint11 the joint the limb-vector1 points to
+	 *  @param joint12 the joint the limb-vector1 origins in
+	 *  @param joint21 the joint the limb-vector2 points to
+	 *  @param joint22 the joint the limb-vector2 origins in
+	 *  @return the angle, float between 0 and PI */
+	public float angleBetween (short joint11, short joint12, short joint21, short joint22) {
+		PVector axis1 = PVector.sub(skeletonPoints[joint11],skeletonPoints[joint12]);
+		PVector axis2 = PVector.sub(skeletonPoints[joint21],skeletonPoints[joint22]);
+		return PVector.angleBetween(axis1,axis2);
+	}
+	
+	/** returns the angle between the limb-vector and local X axis
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the angle, float between 0 and PI */
+	public float angleToLocalXAxis (short joint11, short joint12) {
+		PVector axis1 = PVector.sub(skeletonPointsLocal[joint11],skeletonPointsLocal[joint12]);
+		return PVector.angleBetween(axis1,orientationX);
+	}
+	/** returns the angle between the limb-vector and local Y axis
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the angle, float between 0 and PI */
+	public float angleToLocalYAxis (short joint11, short joint12) {
+		PVector axis1 = PVector.sub(skeletonPointsLocal[joint11],skeletonPointsLocal[joint12]);
+		return PVector.angleBetween(axis1,orientationY);
+	}
+	/** returns the angle between the limb-vector and local Z axis
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the angle, float between 0 and PI */
+	public float angleToLocalZAxis (short joint11, short joint12) {
+		PVector axis1 = PVector.sub(skeletonPointsLocal[joint11],skeletonPointsLocal[joint12]);
+		return PVector.angleBetween(axis1,orientationZ);
+	}
+
+	/** returns the angle between the limb-vector and the global X axis
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the angle, float between 0 and PI */
+	public float angleToXAxis (short joint11, short joint12) {
+		PVector axis1 = PVector.sub(skeletonPoints[joint11],skeletonPoints[joint12]);
+		return PVector.angleBetween(axis1,new PVector(1,0,0));
+	}
+	/** returns the angle between the limb-vector and the global Y axis
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the angle, float between 0 and PI */
+	public float angleToYAxis (short joint11, short joint12) {
+		PVector axis1 = PVector.sub(skeletonPoints[joint11],skeletonPoints[joint12]);
+		return PVector.angleBetween(axis1,new PVector(0,1,0));
+	}
+	/** returns the angle between the limb-vector and the global Z axis
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the angle, float between 0 and PI */
+	public float angleToZAxis (short joint11, short joint12) {
+		PVector axis1 = PVector.sub(skeletonPoints[joint11],skeletonPoints[joint12]);
+		return PVector.angleBetween(axis1,new PVector(0,0,1));
+	}
+
+	/** returns the distance of the skeletons torso joint to the kinect
+	 *  @return the distance in mm, magnitude of skeletons torso vector */
+	public float distanceToKinect () {
+		return skeletonPoints[Skeleton.TORSO].mag();
 	}
 	
 	// -----------------------------------------------------------------
@@ -292,42 +411,6 @@ public class Skeleton {
 			}
 		}
 		return false;
-	}
-
-	// return angle between left arm and body axis in radians
-	public float angleBetween (short joint11, short joint12, short joint21, short joint22) {
-		PVector axis1 = PVector.sub(skeletonPoints[joint11],skeletonPoints[joint12]);
-		PVector axis2 = PVector.sub(skeletonPoints[joint21],skeletonPoints[joint22]);
-		return PVector.angleBetween(axis1,axis2);
-	}
-	
-	// return angle between two joints in radians from -PI to +PI in correspondence to a reference vector 
-	public float angleBetween (short joint11, short joint12, short joint21, short joint22, PVector reference) {
-		PVector axis1 = PVector.sub(skeletonPoints[joint11],skeletonPoints[joint12]);
-		PVector axis2 = PVector.sub(skeletonPoints[joint21],skeletonPoints[joint22]);
-		PVector cross = axis1.cross(axis2);
-		float angle = PApplet.atan2(cross.mag(),axis1.dot(axis2));
-		if (cross.dot(reference) < 0.f) angle *= -1;
-		return angle;
-	}
-	
-	public float angleToXAxis (short joint11, short joint12) {
-		PVector axis1 = PVector.sub(skeletonPoints[joint11],skeletonPoints[joint12]);
-		return PVector.angleBetween(axis1,new PVector(1,0,0));
-	}
-	
-	public float angleToYAxis (short joint11, short joint12) {
-		PVector axis1 = PVector.sub(skeletonPoints[joint11],skeletonPoints[joint12]);
-		return PVector.angleBetween(axis1,new PVector(0,1,0));
-	}
-	
-	public float angleToZAxis (short joint11, short joint12) {
-		PVector axis1 = PVector.sub(skeletonPoints[joint11],skeletonPoints[joint12]);
-		return PVector.angleBetween(axis1,new PVector(0,0,1));
-	}
-	
-	public float distanceToKinect () {
-		return skeletonPoints[Skeleton.TORSO].mag();
 	}
 
 	// -----------------------------------------------------------------
