@@ -27,61 +27,114 @@ public class Skeleton {
 	public static final short RIGHT_KNEE = 13;
 	public static final short RIGHT_FOOT = 14;
 	
-	// shape of upper body joints, see doc/articulated_posture.txt
+	/** Upper body joints form no articulated shape */
 	public static final short NO_SHAPE = 0;
+	/** Upper body joints form articulated V shape: (H = hand, E = elbow, S = shoulder) <br>
+	 *  ---------------------- <br>
+	 *  H        H <br>
+	 *    E    E			= V <br>
+	 *      SS <br>
+	 *  ---------------------- */
 	public static final short V_SHAPE = 1;
+	/** Upper body joints form articulated A shape: (H = hand, E = elbow, S = shoulder)<br>
+	 *  ----------------------<br>
+	 *      SS<br>
+	 *    E    E			= A<br>
+	 *  H        H<br>
+	 *  ---------------------- */
 	public static final short A_SHAPE = 2;
+	/** Upper body joints form articulated U shape: (H = hand, E = elbow, S = shoulder)<br>
+	 *  ----------------------<br>
+	 *  H         H<br>
+	 *          			= U<br>
+	 *  E  SS  E<br>
+	 *  ---------------------- */
 	public static final short U_SHAPE = 3;
+	/** Upper body joints form articulated N shape: (H = hand, E = elbow, S = shoulder)<br>
+	 *  ----------------------<br>
+	 *  E  SS  E<br>
+	 *  					= N<br>
+	 *  H         H<br>
+	 *  ---------------------- */
 	public static final short N_SHAPE = 4;
+	/** Upper body joints form articulated M shape: (H = hand, E = elbow, S = shoulder)<br>
+	 *  ----------------------<br>
+	 *  E         E<br>
+	 *      SS  			= M<br>
+	 *  H         H<br>
+	 *  ---------------------- */
 	public static final short M_SHAPE = 5;
+	/** Upper body joints form articulated W shape: (H = hand, E = elbow, S = shoulder)<br>
+	 *  ----------------------<br>
+	 *  H         H<br>
+	 *      SS   			= W<br>
+	 *  E         E<br>
+	 *  ---------------------- */
 	public static final short W_SHAPE = 6;
+	/** Upper body joints form articulated O shape: (H = hand, E = elbow, S = shoulder)<br>
+	 *  --------------------------------------------<br>
+	 *      HH						        SS<br>
+	 *  E         E		= O = 		E        E<br>
+	 *      SS						        HH<br>
+	 *  -------------------------------------------- */
 	public static final short O_SHAPE = 7;
+	/** Upper body joints form articulated I shape: (H = hand, E = elbow, S = shoulder)<br>
+	 *  --------------------------------------------<br>
+	 *      HH							    SS<br>
+	 *      EE			= I =			    EE<br>
+	 *      SS							    HH<br>
+	 *  -------------------------------------------- */
 	public static final short I_SHAPE = 8;
-	public short activePostureShape = NO_SHAPE;
 	
+	// current upper body posture
+	private short currentUpperBodyPosture = NO_SHAPE;
+	private boolean postureEvaluated = false;
 	// The interface to talk to kinect
-	protected SimpleOpenNI kinect;
-	
+	private SimpleOpenNI kinect;
 	// stores skeleton Points in 3d Space, global coordsys
-	protected PVector[] skeletonPoints = new PVector[15]; 
-	protected float[] confidenceSkeletonPoints = new float[15];
+	private PVector[] skeletonPoints = new PVector[15]; 
+	private float[] confidenceSkeletonPoints = new float[15];
 	// stores skeleton Points in 3d Space, local coordsys (neck is origin)
-	protected PVector[] skeletonPointsLocal = new PVector[15]; 
-	protected PVector origin;
-	protected PVector orientationX, orientationY, orientationZ;
-	protected PMatrix3D transformCoordSys;
-	protected PMatrix3D transformCoordSysInv;
+	private PVector[] skeletonPointsLocal = new PVector[15]; 
+	private PVector origin;
+	private PVector orientationX, orientationY, orientationZ;
+	private PMatrix3D transformCoordSys;
+	private PMatrix3D transformCoordSysInv;
 	// fast access to local hand, elbow and shoulder vectors for posture evaluation
-	protected PVector localLHand, localRHand, localLElbow, localRElbow, localLShoulder, localRShoulder;
-	
+	private PVector localLHand, localRHand, localLElbow, localRElbow, localLShoulder, localRShoulder;
 	// stores joint orientation
-	protected PMatrix3D[] jointOrientations = new PMatrix3D[15];
-	protected float[] confidenceJointOrientations = new float[15];
-	
+	private PMatrix3D[] jointOrientations = new PMatrix3D[15];
+	private float[] confidenceJointOrientations = new float[15];
 	// calculation of mirror plane
 	private PVector[] bodyPoints = new PVector[7]; // stores body points of skeleton 
 	private PVector	rMP = new PVector(); // MirrorPlane in HNF: r*n0-d=0
 	private PVector	n0MP = new PVector();
 	private float dMP = 0.0f;
-	
 	// setup variables
-	protected boolean localCoordSys = true;
-	protected boolean fullBodyTracking = false;
-	protected short mirrorTherapy = MIRROR_THERAPY_OFF;
-	
+	private boolean calculateLocalCoordSys = true;
+	private boolean fullBodyTracking = false;
+	private short mirrorTherapy = MIRROR_THERAPY_OFF;
 	// controls state of skeleton
-	public boolean isUpdated = false;
-	public boolean mirrorPlaneCalculated = false;
-	public boolean localCoordSysCalculated = false;
-	
+	private boolean isUpdated = false;
+	private boolean mirrorPlaneCalculated = false;
+	private boolean localCoordSysCalculated = false;
 	// skeleton of user
-	public int userId;
+	private int userId;
 	
-	public Skeleton (SimpleOpenNI _kinect, int _userId, boolean _fullBodyTracking, boolean _localCoordSys, short _mirrorTherapy) {
+
+	// -----------------------------------------------------------------
+	// CONSTRUCTORS AND STATECONTROL
+	/** Constructor for the Skeleton.
+	 *  @param _kinect Handle to the SimpleOpenNI object. Skeleton will maintain its status in the update method by talking to SimpleOpenNI directly.
+	 *  @param _userId the user ID of the skeleton
+	 *  @param _fullBodyTracking switches full body tracking on/off. If switched off, only upper body joints will be evaluated
+	 *  @param _calculateLocalCoordSys switches calculation of the local coordinate system on/off. If switched on, local coordination system will be calculated and joints will be transformed to it 
+	 *  @param _mirrorTherapy Sets the skeleton to mirror one body side to the other. When mirrorTherapy is set on, mirrorPlane will be calculated. Short value should correspond to skeleton constants. If out of range, mirror therapy will be switched off */
+	public Skeleton (SimpleOpenNI _kinect, int _userId, boolean _fullBodyTracking, boolean _calculateLocalCoordSys, short _mirrorTherapy) {
 		kinect = _kinect;
 		userId = _userId;
 		fullBodyTracking = _fullBodyTracking;
-		localCoordSys = _localCoordSys;
+		calculateLocalCoordSys = _calculateLocalCoordSys;
 		if (_mirrorTherapy >= MIRROR_THERAPY_OFF && _mirrorTherapy <= MIRROR_THERAPY_RIGHT) 
 			mirrorTherapy = _mirrorTherapy;
 		for (int i=0; i<15; i++){
@@ -93,11 +146,13 @@ public class Skeleton {
 			bodyPoints[i] = new PVector();
 		}
 	}
-	
+
+	/** Update method. Call it to update status of skeleton. Skeleton will talk to SimpleOpenNI directly and will do all the necessary math for updating its status according to set up */
 	public void update () {
 		isUpdated = false;
 		localCoordSysCalculated = false;
 		mirrorPlaneCalculated = false;
+		postureEvaluated = false;
 		
 		updateJointPositions();
 		updateJointOrientations();
@@ -107,97 +162,128 @@ public class Skeleton {
 			updateMirroredJointPositions();
 			updateMirroredJointOrientations();
 		}
-		if (localCoordSys) {
+		if (calculateLocalCoordSys) {
 			calculateLocalCoordSys();
 			transformToLocalCoordSys();
 		}
 		
 		isUpdated = true;
 	}
-	
-
 	// -----------------------------------------------------------------
-	// methods to communicate
+	// GETTERS AND SETTERS
+	/** Setter for mirror therapy modus. Sets the skeleton to mirror one body side to the other. When mirrorTherapy is set on, mirrorPlane will be calculated
+	 *  @param _mirrorTherapy short corresponding to Skeleton constants. If out of range, mirror therapy mode will be switched off */
 	public void setMirrorTherapy (short _mirrorTherapy) {
 		if (_mirrorTherapy >= MIRROR_THERAPY_OFF && _mirrorTherapy <= MIRROR_THERAPY_RIGHT) 
 			mirrorTherapy = _mirrorTherapy;
 		else
 			mirrorTherapy = MIRROR_THERAPY_OFF;
 	}
+	/** Getter for mirror therapy modus. 
+	 *  @return short mirror therapy modus corresponding to Skeleton constants */
 	public short getMirrorTherapy () {
 		return mirrorTherapy;
 	}
-	
+	/** Setter for fullBodyTracking. If full body tracking is switched off, only upper body joints will be evaluated.
+	 *  @param _fullBodyTracking switch full body tracking on/off */
 	public void setFullBodyTracking (boolean _fullBodyTracking) {
 		fullBodyTracking = _fullBodyTracking;
 	}
+	/** Getter for full body tracking. 
+	 *  @return true if full body tracking is switched on */
 	public boolean getFullBodyTracking () {
 		return fullBodyTracking;
 	}
-	
-	public void setCalculateLocalCoordSys (boolean _localCoordSys) {
-		localCoordSys = _localCoordSys;
+	/** Setter for calculating the local coordinate system. If switched on, joints will be transformed to local coordinate system.
+	 *  @param _calculateLocalCoordSys switch calculating the local coordinate system on/off */
+	public void setCalculateLocalCoordSys (boolean _calculateLocalCoordSys) {
+		calculateLocalCoordSys = _calculateLocalCoordSys;
 	}
+	/** Getter for calculating the local coordinate system.
+	 *  @return true if calculating the local coordinate system is switched on */
 	public boolean getCalculateLocalCoordSys () {
-		return localCoordSys;
+		return calculateLocalCoordSys;
 	}
-	
+	/** Getter for status of the skeleton. Is used as a lock, methods of skeleton will return unsafe values, as long update function is not done.
+	 *  @return true if the status of the skeleton is fully updated */
+	public boolean isUpdated() {
+		return isUpdated;
+	}
+	/** Getter for user ID of the skeleton.
+	 *  @return the user ID of the skeleton */
+	public int getUserId() {
+		return userId;
+	}
+	/** The positions of the joints are evaluated with a certain confidence value. This method returns the joint position of a certain joint in the global coordinate system
+	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
+	 *  @return The position of a certain joint in the global coordinate system as vector. If jointType out of range: 0-vector */
 	public PVector getJoint (short jointType) {
 		if (jointType >= 0 && jointType <= 14) 
 			return skeletonPoints[jointType];
 		else
 			return new PVector();
 	}
-	
+	/** The positions of the joints are transformed to the local coordinate system of the skeleton if calculateLocalCoordSys was set.
+	 *  This method returns the joint position of a certain joint in the local coordinate system. Works only if localCoordSysCalculated is true.
+	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
+	 *  @return The position of a certain joint in the local coordinate system as vector. If jointType out of range or if localCoordSys was not calculated: 0-vector */
 	public PVector getJointLocalCoordSys (short jointType) {
 		if (jointType >= 0 && jointType <= 14 && localCoordSysCalculated) 
 			return skeletonPointsLocal[jointType];
 		else
 			return new PVector();
 	}
-	
+	/** The positions of the joints are evaluated with a certain confidence value. This method returns the confidence value for a certain joint
+	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
+	 *  @return The confidence value of a certain joint. Between 0f and 1f. If jointType out of range: 0f */
 	public float getConfidenceJoint (short jointType) {
 		if (jointType >= 0 && jointType <= 14) 
 			return confidenceJointOrientations[jointType];
 		else
 			return 0f;
 	}
-	
+	/** The orientations of the joints are evaluated with a certain confidence value. This method returns the orientation matrix 
+	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
+	 *  @return The orientation matrix of a certain joint. PMatrix3D. If jointType out of range: 0-Matrix */
 	public PMatrix3D getJointOrientation (short jointType) {
 		if (jointType >= 0 && jointType <= 14) 
 			return jointOrientations[jointType];
 		else
 			return new PMatrix3D();
 	}
-	
+	/** The orientations of the joints are evaluated with a certain confidence value. This method returns the confidence value 
+	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
+	 *  @return The confidence value for the evaluated orientation of a certain joint. Between 0f and 1f. If jointType out of range: 0f */
 	public float getConfidenceJointOrientation (short jointType) {
 		if (jointType >= 0 && jointType <= 14) 
 			return confidenceJointOrientations[jointType];
 		else
 			return 0f;
 	}
-	
+	/** Mirror Plane is defined in HNF: r*n0-d = 0. works only if mirror plane has been calculated, i.e. skeleton is in mirror therapy mode.
+	 *  @return the r vector of the mirrorPlane if mirror plane was calculated. Else 0-vector */
 	public PVector getRVectorMirrorPlane () {
 		if (mirrorPlaneCalculated)
 			return rMP;
 		else
 			return new PVector();
 	}
-	
+	/** Mirror Plane is defined in HNF: r*n0-d = 0. works only if mirror plane has been calculated, i.e. skeleton is in mirror therapy mode.
+	 *  @return the normal vector of the mirrorPlane if mirror plane was calculated. Else 0-vector */
 	public PVector getN0VectorMirrorPlane () {
 		if (mirrorPlaneCalculated)
 			return n0MP;
 		else
 			return new PVector();
 	}
-	
+	/** Mirror Plane is defined in HNF: r*n0-d = 0. works only if mirror plane has been calculated, i.e. skeleton is in mirror therapy mode.
+	 *  @return the distance of the mirrorPlane to the origin if mirror plane was calculated. Else 0f */
 	public float getDValueMirrorPlane () {
 		if (mirrorPlaneCalculated)
 			return dMP;
 		else
 			return 0f;
 	}
-
 	/** returns the origin of the local coordsys. Equals Torso Vector. works only if localCoordSys has been calculated
 	 *  @return the origin. 0-vector if localCoordSys has not been calculated */
 	public PVector getOrigin () {
@@ -206,7 +292,6 @@ public class Skeleton {
 		else
 			return new PVector();
 	}
-
 	/** returns the local x coordinate vector. works only if localCoordSys has been calculated
 	 *  @return the local vector. 0-vector if localCoordSys has not been calculated */
 	public PVector getOrientationX () {
@@ -255,7 +340,6 @@ public class Skeleton {
 		} else
 			return 0f;
 	}
-	
 	/** returns the angle between two limb-vectors
 	 *  @param joint11 the joint the limb-vector1 points to
 	 *  @param joint12 the joint the limb-vector1 origins in
@@ -267,7 +351,6 @@ public class Skeleton {
 		PVector axis2 = PVector.sub(skeletonPoints[joint21],skeletonPoints[joint22]);
 		return PVector.angleBetween(axis1,axis2);
 	}
-	
 	/** returns the angle between the limb-vector and local X axis
 	 *  @param joint11 the joint the limb-vector points to
 	 *  @param joint12 the joint the limb-vector origins in
@@ -292,7 +375,6 @@ public class Skeleton {
 		PVector axis1 = PVector.sub(skeletonPointsLocal[joint11],skeletonPointsLocal[joint12]);
 		return PVector.angleBetween(axis1,orientationZ);
 	}
-
 	/** returns the angle between the limb-vector and the global X axis
 	 *  @param joint11 the joint the limb-vector points to
 	 *  @param joint12 the joint the limb-vector origins in
@@ -317,7 +399,6 @@ public class Skeleton {
 		PVector axis1 = PVector.sub(skeletonPoints[joint11],skeletonPoints[joint12]);
 		return PVector.angleBetween(axis1,new PVector(0,0,1));
 	}
-
 	/** returns the distance of the skeletons torso joint to the kinect
 	 *  @return the distance in mm, magnitude of skeletons torso vector */
 	public float distanceToKinect () {
@@ -325,9 +406,44 @@ public class Skeleton {
 	}
 	
 	// -----------------------------------------------------------------
-	// methods to calculate body posture
-	// evaluate upper body joints according to articulated postures defined in doc/articulated_posture.txt
-	public short getUpperJointPosture () {
+	// POSTURE ACCESS
+	/** Evaluates if current upper body posture corresponds to one of the following shapes:<p>
+	 *  (H = hand, E = elbow, S = shoulder)<br>
+	 *  ----------------------<br>
+	 *  H        H<br>
+	 *    E    E			= V<br>
+	 *      SS<br>
+	 *  ----------------------<br>
+	 *      SS<br>
+	 *    E    E			= A<br>
+	 *  H        H<br>
+	 *  ----------------------<br>
+	 *  H         H<br>
+	 *          			= U<br>
+	 *  E  SS  E<br>
+	 *  ----------------------<br>
+	 *  E  SS  E<br>
+	 *  					= N<br>
+	 *  H         H<br>
+	 *  ----------------------<br>
+	 *  E         E<br>
+	 *      SS  			= M<br>
+	 *  H         H<br>
+	 *  ----------------------<br>
+	 *  H         H<br>
+	 *      SS   			= W<br>
+	 *  E         E<br>
+	 *  --------------------------------------------<br>
+	 *      HH						        SS<br>
+	 *  E         E		= O = 		E        E<br>
+	 *      SS						        HH<br>
+	 *  --------------------------------------------<br>
+	 *      HH							    SS<br>
+	 *      EE			= I =			    EE<br>
+	 *      SS							    HH<br>
+	 *  --------------------------------------------<br>
+	 *  @return current upper body posture. short, constants of Skeleton class */
+	public short evaluateUpperJointPosture () {
 		if (isUpdated && localCoordSysCalculated) {
 			localLHand = skeletonPoints[Skeleton.LEFT_HAND];
 			localRHand = skeletonPoints[Skeleton.RIGHT_HAND];
@@ -335,27 +451,35 @@ public class Skeleton {
 			localRElbow = skeletonPoints[Skeleton.RIGHT_ELBOW];
 			localLShoulder = skeletonPoints[Skeleton.LEFT_SHOULDER];
 			localRShoulder = skeletonPoints[Skeleton.RIGHT_SHOULDER];
-			if (evaluateVShape()) activePostureShape = V_SHAPE;
-			else if (evaluateAShape()) activePostureShape = A_SHAPE;
-			else if (evaluateUShape()) activePostureShape = U_SHAPE;
-			else if (evaluateNShape()) activePostureShape = N_SHAPE;
-			else if (evaluateMShape()) activePostureShape = M_SHAPE;
-			else if (evaluateWShape()) activePostureShape = W_SHAPE;
-			else if (evaluateOShape()) activePostureShape = O_SHAPE;
-			else if (evaluateIShape()) activePostureShape = I_SHAPE;
-			else activePostureShape = NO_SHAPE;
-			return activePostureShape;
+			if (evaluateVShape()) currentUpperBodyPosture = V_SHAPE;
+			else if (evaluateAShape()) currentUpperBodyPosture = A_SHAPE;
+			else if (evaluateUShape()) currentUpperBodyPosture = U_SHAPE;
+			else if (evaluateNShape()) currentUpperBodyPosture = N_SHAPE;
+			else if (evaluateMShape()) currentUpperBodyPosture = M_SHAPE;
+			else if (evaluateWShape()) currentUpperBodyPosture = W_SHAPE;
+			else if (evaluateOShape()) currentUpperBodyPosture = O_SHAPE;
+			else if (evaluateIShape()) currentUpperBodyPosture = I_SHAPE;
+			else currentUpperBodyPosture = NO_SHAPE;
+			postureEvaluated = true;
+			return currentUpperBodyPosture; 
 		} else {
-			activePostureShape = NO_SHAPE;
-			return activePostureShape;
+			currentUpperBodyPosture = NO_SHAPE;
+			postureEvaluated = false;
+			return currentUpperBodyPosture; 
 		}
 	}
-
+	/** Returns the evaluated upper body posture. works only if posture was calculated in the current update cycle
+	 * @return current upper body posture. short, constants of Skeleton class. NO_SHAPE if posture was not updated */
+	public short getCurrentUpperBodyPosture() {
+		if (postureEvaluated)
+			return currentUpperBodyPosture; 
+		else
+			return currentUpperBodyPosture=Skeleton.NO_SHAPE;
+	}
 	private boolean evaluateIShape() {
 		// TODO Auto-generated method stub
 		return false;
 	}
-
 	private boolean evaluateOShape() {
 		PVector lElbowShoulder = PVector.sub(localLElbow,localLShoulder);
 		PVector rElbowShoulder = PVector.sub(localRElbow,localRShoulder);
@@ -371,32 +495,26 @@ public class Skeleton {
 		}
 		return false;
 	}
-
 	private boolean evaluateWShape() {
 		// TODO Auto-generated method stub
 		return false;
 	}
-
 	private boolean evaluateMShape() {
 		// TODO Auto-generated method stub
 		return false;
 	}
-
 	private boolean evaluateNShape() {
 		// TODO Auto-generated method stub
 		return false;
 	}
-
 	private boolean evaluateUShape() {
 		// TODO Auto-generated method stub
 		return false;
 	}
-
 	private boolean evaluateAShape() {
 		// TODO Auto-generated method stub
 		return false;
 	}
-
 	private boolean evaluateVShape() {
 		PVector lElbowShoulder = PVector.sub(localLElbow,localLShoulder);
 		PVector rElbowShoulder = PVector.sub(localRElbow,localRShoulder);
@@ -414,7 +532,7 @@ public class Skeleton {
 	}
 
 	// -----------------------------------------------------------------
-	// maths
+	// PRIVATE MATHS FUNCTIONS
 	// evaluate local coord sys
 	// origin: neck
 	// orientation: 
@@ -457,7 +575,6 @@ public class Skeleton {
 		
 		localCoordSysCalculated = true;
 	}
-	
 	// transform joint coordinates to lokal coordsys. 
 	private PVector getLocalVector (PVector globalVector) {
 		if (localCoordSysCalculated) {
@@ -469,7 +586,6 @@ public class Skeleton {
 			return new PVector();
 		}
 	}
-	
 	// mirror joints
 	private void mirrorOrientationMatrix (PMatrix3D matrix) {
 		PVector x = new PVector(matrix.m00,matrix.m10,matrix.m20);
@@ -489,7 +605,6 @@ public class Skeleton {
 		z.sub(rMP);
 		matrix.set(-x.x,y.x,z.x,matrix.m03,-x.y,y.y,z.y,matrix.m13,-x.z,y.z,z.z,matrix.m23,matrix.m30,matrix.m31,matrix.m32,matrix.m33);		
 	}
-	
 	private void calculateMirrorPlane () {
 		// calculate body plane of Shoulder and Torso points in HNF
 		// HNF: r*n0-d = 0
@@ -510,13 +625,12 @@ public class Skeleton {
 		dMP = PVector.dot(rMP,n0MP);
 		mirrorPlaneCalculated = true;
 	}
-
 	private boolean valueBetween (float val, float lowerBound, float upperBound) {
 			return (val >= lowerBound && val <= upperBound);
 	}
 	
 	// -----------------------------------------------------------------
-	// update skeleton methods
+	// PRIVATE HELPER METHODS
 	private void updateJointPositions () {
 		confidenceSkeletonPoints[Skeleton.HEAD] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_HEAD,skeletonPoints[Skeleton.HEAD]);
 		confidenceSkeletonPoints[Skeleton.NECK] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_NECK,skeletonPoints[Skeleton.NECK]);
@@ -536,7 +650,6 @@ public class Skeleton {
 			confidenceSkeletonPoints[Skeleton.RIGHT_FOOT] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_FOOT,skeletonPoints[Skeleton.RIGHT_FOOT]);
 		}
 	}
-	
 	private void updateMirroredJointPositions () {
 		if (mirrorPlaneCalculated) {
 			switch (mirrorTherapy) {
@@ -563,7 +676,6 @@ public class Skeleton {
 			}	
 		}
 	}
-	
 	private void updateJointOrientations () {
 		confidenceJointOrientations[Skeleton.HEAD] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_HEAD,jointOrientations[Skeleton.HEAD]);
 		confidenceJointOrientations[Skeleton.NECK] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_NECK,jointOrientations[Skeleton.NECK]);
@@ -583,7 +695,6 @@ public class Skeleton {
 			confidenceJointOrientations[Skeleton.RIGHT_FOOT] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_FOOT,jointOrientations[Skeleton.RIGHT_FOOT]);
 		}
 	}
-	
 	private void updateMirroredJointOrientations () {
 		if (mirrorPlaneCalculated) {
 			switch (mirrorTherapy) {
@@ -618,7 +729,6 @@ public class Skeleton {
 			}
 		}	
 	}
-	
 	private void transformToLocalCoordSys () {
 		skeletonPointsLocal[Skeleton.HEAD] = getLocalVector(skeletonPoints[Skeleton.HEAD]);
 		skeletonPointsLocal[Skeleton.NECK] = getLocalVector(skeletonPoints[Skeleton.NECK]);
@@ -638,6 +748,5 @@ public class Skeleton {
 			skeletonPointsLocal[Skeleton.RIGHT_FOOT] = getLocalVector(skeletonPoints[Skeleton.RIGHT_FOOT]);
 		}
 	}
-	
 }
 	
