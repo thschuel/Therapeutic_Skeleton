@@ -214,7 +214,7 @@ public class Skeleton {
 	public int getUserId() {
 		return userId;
 	}
-	/** The positions of the joints are evaluated with a certain confidence value. This method returns the joint position of a certain joint in the global coordinate system
+	/** This method returns the joint position of a certain joint in the global coordinate system
 	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
 	 *  @return The position of a certain joint in the global coordinate system as vector. If jointType out of range: 0-vector */
 	public PVector getJoint (short jointType) {
@@ -222,6 +222,18 @@ public class Skeleton {
 			return skeletonPoints[jointType];
 		else
 			return new PVector();
+	}
+	/** This method returns the joint position of a certain joint on the kinect's projective plane. Z-value will be 0
+	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
+	 *  @return The position of a certain joint as vector on the projective plane of the kinect. If jointType out of range: 0-vector */
+	public PVector getJointProjective (short jointType) {
+		if (jointType >= 0 && jointType <= 14) {
+			PVector projective = new PVector();
+			kinect.convertRealWorldToProjective(skeletonPoints[jointType], projective);
+			return projective;
+		} else {
+			return new PVector();
+		}
 	}
 	/** The positions of the joints are transformed to the local coordinate system of the skeleton if calculateLocalCoordSys was set.
 	 *  This method returns the joint position of a certain joint in the local coordinate system. Works only if localCoordSysCalculated is true.
