@@ -312,6 +312,17 @@ public class Skeleton {
 		else
 			return new PVector();
 	}
+	/** returns the local x coordinate vector projected to the kinects projectionn plane. works only if localCoordSys has been calculated
+	 *  @return the local vector projected to the kinects projection plane. 0-vector if localCoordSys has not been calculated */
+	public PVector getOrientationXProjective () {
+		if (localCoordSysCalculated) {
+			PVector projective = new PVector();
+			kinect.convertRealWorldToProjective(orientationX,projective);
+			return projective;
+		} else {
+			return new PVector();
+		}
+	}
 	/** returns the angle between the local x vector and the global x vector. works only if localCoordSys has been calculated
 	 *  @return the angle, float between 0 and PI. 0f when localCoordSys has not been calculated */
 	public float getOrientationAlpha () {
@@ -328,6 +339,17 @@ public class Skeleton {
 		else
 			return new PVector();
 	}
+	/** returns the local y coordinate vector projected to the kinects projectionn plane. works only if localCoordSys has been calculated
+	 *  @return the local vector projected to the kinects projection plane. 0-vector if localCoordSys has not been calculated */
+	public PVector getOrientationYProjective () {
+		if (localCoordSysCalculated) {
+			PVector projective = new PVector();
+			kinect.convertRealWorldToProjective(orientationY,projective);
+			return projective;
+		} else {
+			return new PVector();
+		}
+	}
 	/** returns the angle between the local y vector and the global y vector. works only if localCoordSys has been calculated
 	 *  @return the angle, float between 0 and PI. 0f when localCoordSys has not been calculated */
 	public float getOrientationBeta () {
@@ -343,6 +365,17 @@ public class Skeleton {
 			return orientationZ;
 		else
 			return new PVector();
+	}
+	/** returns the local z coordinate vector projected to the kinects projectionn plane. works only if localCoordSys has been calculated
+	 *  @return the local vector projected to the kinects projection plane. 0-vector if localCoordSys has not been calculated */
+	public PVector getOrientationZProjective () {
+		if (localCoordSysCalculated) {
+			PVector projective = new PVector();
+			kinect.convertRealWorldToProjective(orientationZ,projective);
+			return projective;
+		} else {
+			return new PVector();
+		}
 	}
 	/** returns the angle between the local z vector and the global z vector. works only if localCoordSys has been calculated
 	 *  @return the angle, float between 0 and PI. 0f when localCoordSys has not been calculated*/
@@ -493,17 +526,19 @@ public class Skeleton {
 		return false;
 	}
 	private boolean evaluateOShape() {
-		PVector lElbowShoulder = PVector.sub(localLElbow,localLShoulder);
-		PVector rElbowShoulder = PVector.sub(localRElbow,localRShoulder);
-		PVector lHandElbow = PVector.sub(localLHand,localLElbow);
-		PVector rHandElbow = PVector.sub(localRHand,localRElbow);
 		PVector rHandlHand = PVector.sub(localRHand,localLHand);
-		float angleL = PVector.angleBetween(lElbowShoulder,lHandElbow);
-		float angleR = PVector.angleBetween(rElbowShoulder,rHandElbow);
-		if (valueBetween(angleL,PConstants.PI/5,2*PConstants.PI/3) && valueBetween(angleR,PConstants.PI/4,PConstants.PI/2)) { // arms form an angle between 45 and 90 degree
-			if (valueBetween(rHandlHand.mag(),0,100)) {
-				return true;
-			}
+		if (isValueBetween(rHandlHand.mag(),0,200)) {
+			return true;
+//			float angleLUpper = PVector.angleBetween(PVector.sub(localLElbow,localLShoulder),orientationY);
+//			float angleRUpper = PVector.angleBetween(PVector.sub(localRElbow,localRShoulder),orientationY);
+//			float angleLLower = PVector.angleBetween(PVector.sub(localLHand,localLElbow),orientationY);
+//			float angleRLower = PVector.angleBetween(PVector.sub(localRHand,localRElbow),orientationY);
+//			float accuracy = PConstants.PI/7f;
+//			if (isValueBetween(angleLUpper,PConstants.HALF_PI/2f-accuracy,PConstants.HALF_PI/2f+accuracy) && isValueBetween(angleRUpper,PConstants.HALF_PI/2f-accuracy,PConstants.HALF_PI/2f+accuracy)) {
+//				if (isValueBetween(angleLLower,PConstants.HALF_PI-accuracy,PConstants.HALF_PI+accuracy) && isValueBetween(angleRLower,PConstants.HALF_PI-accuracy,PConstants.HALF_PI+accuracy)) {
+//					return true;
+//				}
+//			}
 		}
 		return false;
 	}
@@ -535,8 +570,8 @@ public class Skeleton {
 		float angleL = PVector.angleBetween(lElbowShoulder,lHandElbow);
 		float angleR = PVector.angleBetween(rElbowShoulder,rHandElbow);
 		float angleVShape = PVector.angleBetween(lElbowShoulder, rElbowShoulder);
-		if (valueBetween(angleL,0,PConstants.PI/8) && valueBetween(angleR,0,PConstants.PI/8)) { // arms form a straight line
-			if (valueBetween(angleVShape,PConstants.PI/4,PConstants.PI/2)) { // arms angle between 45 and 90 degree
+		if (isValueBetween(angleL,0,PConstants.PI/8) && isValueBetween(angleR,0,PConstants.PI/8)) { // arms form a straight line
+			if (isValueBetween(angleVShape,PConstants.PI/4,PConstants.PI/2)) { // arms angle between 45 and 90 degree
 				return true;
 			}
 		}
@@ -637,7 +672,7 @@ public class Skeleton {
 		dMP = PVector.dot(rMP,n0MP);
 		mirrorPlaneCalculated = true;
 	}
-	private boolean valueBetween (float val, float lowerBound, float upperBound) {
+	private boolean isValueBetween (float val, float lowerBound, float upperBound) {
 			return (val >= lowerBound && val <= upperBound);
 	}
 	
