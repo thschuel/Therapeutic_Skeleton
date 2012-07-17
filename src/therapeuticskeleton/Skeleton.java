@@ -85,20 +85,11 @@ public class Skeleton {
 	 *      SS							    HH<br>
 	 *  -------------------------------------------- */
 	public static final short I_SHAPE = 8;
-	/** Upper body joints form articulated namaste pose: (H = hand, E = elbow, S = shoulder)<br>
-	 *  --------------------------------------------<br>
-	 *    S    S			<br>
-	 *  E   HH	 E		= NAMASTE<br>
-	 *  -------------------------------------------- */
-	public static final short NAMASTE_SHAPE = 9;
-	
-	/** Default accuracy value for posture detection. 0f..1f.*/
-	public static final float DEFAULT_POSTURE_TOLERANCE = 0.3f;
 	
 	// current upper body posture
 	private short currentUpperBodyPosture = NO_SHAPE;
 	private boolean postureEvaluated = false;
-	private float postureTolerance = DEFAULT_POSTURE_TOLERANCE; // in percentage
+	private float postureTolerance = 0.3f;
 	// The interface to talk to kinect
 	private SimpleOpenNI kinect;
 	// stores skeleton Points in 3d Space, global coordsys
@@ -129,7 +120,7 @@ public class Skeleton {
 	private float dMP = 0.0f;
 	// setup variables
 	private boolean calculateLocalCoordSys = true;
-	private boolean fullBodyTracking = false;
+	private boolean fullBodyTracking = true;
 	private short mirrorTherapy = MIRROR_THERAPY_OFF;
 	// controls state of skeleton
 	private boolean isUpdated = false;
@@ -154,6 +145,21 @@ public class Skeleton {
 		calculateLocalCoordSys = _calculateLocalCoordSys;
 		if (_mirrorTherapy >= MIRROR_THERAPY_OFF && _mirrorTherapy <= MIRROR_THERAPY_RIGHT) 
 			mirrorTherapy = _mirrorTherapy;
+		for (int i=0; i<15; i++){
+			joints[i] = new PVector();
+			jointsLocal[i] = new PVector();
+			jointOrientations[i] = new PMatrix3D();
+		}
+		for (int i=0; i<7; i++){
+			bodyPoints[i] = new PVector();
+		}
+	}
+	/** Constructor for the Skeleton. Defaults used for setup.
+	 *  @param _kinect Handle to the SimpleOpenNI object. Skeleton will maintain its status in the update method by talking to SimpleOpenNI directly.
+	 *  @param _userId the user ID of the skeleton */
+	public Skeleton (SimpleOpenNI _kinect, int _userId) {
+		kinect = _kinect;
+		userId = _userId;
 		for (int i=0; i<15; i++){
 			joints[i] = new PVector();
 			jointsLocal[i] = new PVector();
@@ -222,12 +228,12 @@ public class Skeleton {
 		return calculateLocalCoordSys;
 	}
 	/** Setter for the tolerance with which posture will be detected. 0..1f.
-	 *  @param the tolerance between 0..1f. when higher than 1 or lower than 0, default tolerance will be set */
+	 *  @param the tolerance between 0..1f. when higher than 1 or lower than 0, default tolerance 0.3f will be set */
 	public void setPostureTolerance (float _postureTolerance) {
 		if (_postureTolerance >= 0f && _postureTolerance <= 1f)
 			postureTolerance = _postureTolerance;
 		else
-			postureTolerance = DEFAULT_POSTURE_TOLERANCE; // default posture accuracy
+			postureTolerance = 0.3f; // default posture accuracy
 	}
 	/** Getter for calculating the local coordinate system.
 	 *  @return true if calculating the local coordinate system is switched on */
@@ -569,9 +575,6 @@ public class Skeleton {
 	 *      EE			= I =			    EE<br>
 	 *      SS							    HH<br>
 	 *  --------------------------------------------<br>
-	 *    S    S			<br>
-	 *  E   HH	 E		= NAMASTE<br>
-	 *  -------------------------------------------- <br>
 	 *  @return current upper body posture. short, constants of Skeleton class */
 	public short evaluateUpperJointPosture () {
 		if (isUpdated && localCoordSysCalculated) {
@@ -583,7 +586,6 @@ public class Skeleton {
 			else if (evaluateWShape()) currentUpperBodyPosture = W_SHAPE;
 			else if (evaluateOShape()) currentUpperBodyPosture = O_SHAPE;
 			else if (evaluateIShape()) currentUpperBodyPosture = I_SHAPE;
-			else if (evaluateNamasteShape()) currentUpperBodyPosture = NAMASTE_SHAPE;
 			else currentUpperBodyPosture = NO_SHAPE;
 			postureEvaluated = true;
 			return currentUpperBodyPosture; 
@@ -602,7 +604,15 @@ public class Skeleton {
 			return currentUpperBodyPosture=Skeleton.NO_SHAPE;
 	}
 	private boolean evaluateIShape() {
-		// TODO Auto-generated method stub
+		float angleLArm = PVector.angleBetween(lUpperArmLocal,lLowerArmLocal);
+		float angleRArm = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
+		float angleIShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
+		float angleTolerance = PConstants.PI*postureTolerance;
+		if (isValueBetween(angleLArm,0,PApplet.radians(10)+angleTolerance) && isValueBetween(angleRArm,0,PApplet.radians(10)+angleTolerance)) { // arms form a straight line
+			if (isValueBetween(angleIShape,0,PApplet.radians(15)+angleTolerance)) { // arms are parallel
+				return true;
+			}
+		}
 		return false;
 	}
 	private boolean evaluateOShape() {
@@ -613,8 +623,8 @@ public class Skeleton {
 			float angleLLower = PVector.angleBetween(lLowerArmLocal,lUpperArmLocal);
 			float angleRLower = PVector.angleBetween(rLowerArmLocal,rUpperArmLocal);
 			float angleTolerance = PConstants.PI*postureTolerance;
-			if (isValueBetween(angleLUpper,PConstants.PI/4f-angleTolerance,PConstants.PI/4f+angleTolerance) && isValueBetween(angleRUpper,PConstants.PI/4f-angleTolerance,PConstants.PI/4f+angleTolerance)) { // 45 degree
-				if (isValueBetween(angleLLower,PConstants.HALF_PI-angleTolerance,PConstants.HALF_PI+angleTolerance) && isValueBetween(angleRLower,PConstants.HALF_PI-angleTolerance,PConstants.HALF_PI+angleTolerance)) { // 90 degree
+			if (isValueBetween(angleLUpper,PApplet.radians(40)-angleTolerance,PApplet.radians(50)+angleTolerance) && isValueBetween(angleRUpper,PApplet.radians(40)-angleTolerance,PApplet.radians(50)+angleTolerance)) { // ~45 degree
+				if (isValueBetween(angleLLower,PApplet.radians(95)-angleTolerance,PApplet.radians(105)+angleTolerance) && isValueBetween(angleRLower,PApplet.radians(95)-angleTolerance,PApplet.radians(105)+angleTolerance)) { // ~100 degree
 					return true;
 				}
 			}
@@ -632,47 +642,58 @@ public class Skeleton {
 	private boolean evaluateNShape() {
 		float angleL = PVector.angleBetween(lUpperArmLocal,lLowerArmLocal);
 		float angleR = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
-		float angleVShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
+		float angleNShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
+		float angleToBody = PVector.angleBetween(lLowerArmLocal,orientationY);
 		float angleTolerance = PConstants.PI*postureTolerance;
-		if (isValueBetween(angleL,0,PConstants.PI/8+angleTolerance) && isValueBetween(angleR,0,PConstants.PI/8+angleTolerance)) { // arms form a straight line
-			if (isValueBetween(angleVShape,PConstants.PI/4-angleTolerance,PConstants.PI/2+angleTolerance)) { // arms angle between 45 and 90 degree
-				if (jointsLocal[LEFT_HAND].y < jointsLocal[LEFT_SHOULDER].y) // arms downwards 
+		if (isValueBetween(angleL,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance) && isValueBetween(angleR,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance)) { // arms angle ~90 degree
+			if (isValueBetween(angleNShape,PApplet.radians(170)-angleTolerance,PApplet.radians(180))) { // upper arms form a straight line
+				if (isValueBetween(angleToBody,PApplet.radians(90),PApplet.radians(180))) {// arms downwards 
 					return true;
+				}
 			}
 		}
 		return false;
 	}
 	private boolean evaluateUShape() {
-		// TODO Auto-generated method stub
+		float angleL = PVector.angleBetween(lUpperArmLocal,lLowerArmLocal);
+		float angleR = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
+		float angleUShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
+		float angleToBody = PVector.angleBetween(lLowerArmLocal,orientationY);
+		float angleTolerance = PConstants.PI*postureTolerance;
+		if (isValueBetween(angleL,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance) && isValueBetween(angleR,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance)) { // arms angle ~90 degree
+			if (isValueBetween(angleUShape,PApplet.radians(170)-angleTolerance,PApplet.radians(180))) { // upper arms form a straight line
+				if (isValueBetween(angleToBody,0,PApplet.radians(90))) {// arms upwards 
+					return true;
+				}
+			}
+		}
 		return false;
 	}
 	private boolean evaluateAShape() {
-		// TODO Auto-generated method stub
+		float angleL = PVector.angleBetween(lUpperArmLocal,lLowerArmLocal);
+		float angleR = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
+		float angleAShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
+		float angleToBody = PVector.angleBetween(lUpperArmLocal,orientationY);
+		float angleTolerance = PConstants.PI*postureTolerance;
+		if (isValueBetween(angleL,0,PApplet.radians(10)+angleTolerance) && isValueBetween(angleR,0,PApplet.radians(10)+angleTolerance)) { // arms form a straight line
+			if (isValueBetween(angleAShape,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance)) { // arms angle ~90 degree
+				if (isValueBetween(angleToBody,PApplet.radians(90),PApplet.radians(180))) {// arms downwards 
+					return true;
+				}
+			}
+		}
 		return false;
 	}
 	private boolean evaluateVShape() {
 		float angleL = PVector.angleBetween(lUpperArmLocal,lLowerArmLocal);
 		float angleR = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
 		float angleVShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
+		float angleToBody = PVector.angleBetween(lUpperArmLocal,orientationY);
 		float angleTolerance = PConstants.PI*postureTolerance;
-		if (isValueBetween(angleL,0,PConstants.PI/8+angleTolerance) && isValueBetween(angleR,0,PConstants.PI/8+angleTolerance)) { // arms form a straight line
-			if (isValueBetween(angleVShape,PConstants.PI/4-angleTolerance,PConstants.PI/2+angleTolerance)) { // arms angle between 45 and 90 degree
-				if (jointsLocal[LEFT_HAND].y > jointsLocal[LEFT_SHOULDER].y) // arms upwards 
+		if (isValueBetween(angleL,0,PApplet.radians(10)+angleTolerance) && isValueBetween(angleR,0,PApplet.radians(10)+angleTolerance)) { // arms form a straight line
+			if (isValueBetween(angleVShape,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance)) { // arms angle ~90 degree
+				if (isValueBetween(angleToBody,0,PApplet.radians(90))) {// arms upwards 
 					return true;
-			}
-		}
-		return false;
-	}
-	private boolean evaluateNamasteShape() {
-		PVector rHandlHand = PVector.sub(jointsLocal[RIGHT_HAND],jointsLocal[LEFT_HAND]);
-		if (isValueBetween(rHandlHand.mag(),0,100+(100*postureTolerance))) {
-			float angleLowerArms = PVector.angleBetween(lLowerArmLocal, rLowerArmLocal);
-			float angleUpperArms = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
-			float angleTolerance = PConstants.PI*postureTolerance;
-			if (isValueBetween(angleLowerArms,0,PConstants.PI/10f+angleTolerance)) { // lower arms form straight line
-				if (isValueBetween(angleUpperArms,PApplet.radians(27)-angleTolerance,PApplet.radians(33)+angleTolerance)) { // upper arms have angle of 30 degree
-					if (jointsLocal[LEFT_HAND].y < jointsLocal[LEFT_SHOULDER].y) // hands below shoulder
-						return true;
 				}
 			}
 		}
