@@ -621,10 +621,13 @@ public class Skeleton {
 		float angleLArm = PVector.angleBetween(lUpperArmLocal,lLowerArmLocal);
 		float angleRArm = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
 		float angleIShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
-		float angleTolerance = PConstants.PI*postureTolerance;
+		float angleToBodyY = PVector.angleBetween(lUpperArmLocal, orientationY);
+		float angleTolerance = PApplet.radians(20)*postureTolerance;
 		if (isValueBetween(angleLArm,0,PApplet.radians(10)+angleTolerance) && isValueBetween(angleRArm,0,PApplet.radians(10)+angleTolerance)) { // arms form a straight line
 			if (isValueBetween(angleIShape,0,PApplet.radians(15)+angleTolerance)) { // arms are parallel
-				return true;
+				if (isValueBetween(angleToBodyY,0,PApplet.radians(15)+angleTolerance)) { // arms are parallel to y body axis
+					return true;
+				}
 			}
 		}
 		return false;
@@ -636,10 +639,13 @@ public class Skeleton {
 			float angleRUpper = PVector.angleBetween(rUpperArmLocal,orientationY);
 			float angleLLower = PVector.angleBetween(lLowerArmLocal,lUpperArmLocal);
 			float angleRLower = PVector.angleBetween(rLowerArmLocal,rUpperArmLocal);
-			float angleTolerance = PConstants.PI*postureTolerance;
+			float angleToBody = PVector.angleBetween(PVector.add(lUpperArmLocal,rUpperArmLocal),orientationY);
+			float angleTolerance = PApplet.radians(20)*postureTolerance;
 			if (isValueBetween(angleLUpper,PApplet.radians(40)-angleTolerance,PApplet.radians(50)+angleTolerance) && isValueBetween(angleRUpper,PApplet.radians(40)-angleTolerance,PApplet.radians(50)+angleTolerance)) { // ~45 degree
 				if (isValueBetween(angleLLower,PApplet.radians(95)-angleTolerance,PApplet.radians(105)+angleTolerance) && isValueBetween(angleRLower,PApplet.radians(95)-angleTolerance,PApplet.radians(105)+angleTolerance)) { // ~100 degree
-					return true;
+					if (isValueBetween(angleToBody,0,PApplet.radians(15)+angleTolerance)) { // sum of upper arms parallel to body y axis
+						return true;
+					}
 				}
 			}
 		}
@@ -657,11 +663,11 @@ public class Skeleton {
 		float angleL = PVector.angleBetween(lUpperArmLocal,lLowerArmLocal);
 		float angleR = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
 		float angleNShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
-		float angleToBody = PVector.angleBetween(lLowerArmLocal,orientationY);
-		float angleTolerance = PConstants.PI*postureTolerance;
+		float angleToBodyY = PVector.angleBetween(lLowerArmLocal,orientationY);
+		float angleTolerance = PApplet.radians(20)*postureTolerance;
 		if (isValueBetween(angleL,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance) && isValueBetween(angleR,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance)) { // arms angle ~90 degree
 			if (isValueBetween(angleNShape,PApplet.radians(170)-angleTolerance,PApplet.radians(180))) { // upper arms form a straight line
-				if (isValueBetween(angleToBody,PApplet.radians(90),PApplet.radians(180))) {// arms downwards 
+				if (isValueBetween(angleToBodyY,PApplet.radians(165)-angleTolerance,PApplet.radians(180))) {// arms downwards 
 					return true;
 				}
 			}
@@ -672,11 +678,11 @@ public class Skeleton {
 		float angleL = PVector.angleBetween(lUpperArmLocal,lLowerArmLocal);
 		float angleR = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
 		float angleUShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
-		float angleToBody = PVector.angleBetween(lLowerArmLocal,orientationY);
-		float angleTolerance = PConstants.PI*postureTolerance;
+		float angleToBodyY = PVector.angleBetween(lLowerArmLocal,orientationY);
+		float angleTolerance = PApplet.radians(20)*postureTolerance;
 		if (isValueBetween(angleL,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance) && isValueBetween(angleR,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance)) { // arms angle ~90 degree
 			if (isValueBetween(angleUShape,PApplet.radians(170)-angleTolerance,PApplet.radians(180))) { // upper arms form a straight line
-				if (isValueBetween(angleToBody,0,PApplet.radians(90))) {// arms upwards 
+				if (isValueBetween(angleToBodyY,0,PApplet.radians(15)+angleTolerance)) {// arms upwards 
 					return true;
 				}
 			}
@@ -687,11 +693,11 @@ public class Skeleton {
 		float angleL = PVector.angleBetween(lUpperArmLocal,lLowerArmLocal);
 		float angleR = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
 		float angleAShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
-		float angleToBody = PVector.angleBetween(lUpperArmLocal,orientationY);
-		float angleTolerance = PConstants.PI*postureTolerance;
+		float angleToBody = PVector.angleBetween(PVector.add(lUpperArmLocal,rUpperArmLocal),orientationY);
+		float angleTolerance = PApplet.radians(20)*postureTolerance;
 		if (isValueBetween(angleL,0,PApplet.radians(10)+angleTolerance) && isValueBetween(angleR,0,PApplet.radians(10)+angleTolerance)) { // arms form a straight line
 			if (isValueBetween(angleAShape,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance)) { // arms angle ~90 degree
-				if (isValueBetween(angleToBody,PApplet.radians(90),PApplet.radians(180))) {// arms downwards 
+				if (isValueBetween(angleToBody,PApplet.radians(165)-angleTolerance,PApplet.radians(180))) { // sum of upper arms parallel to body y axis
 					return true;
 				}
 			}
@@ -702,11 +708,11 @@ public class Skeleton {
 		float angleL = PVector.angleBetween(lUpperArmLocal,lLowerArmLocal);
 		float angleR = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
 		float angleVShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
-		float angleToBody = PVector.angleBetween(lUpperArmLocal,orientationY);
-		float angleTolerance = PConstants.PI*postureTolerance;
+		float angleToBody = PVector.angleBetween(PVector.add(lUpperArmLocal,rUpperArmLocal),orientationY);
+		float angleTolerance = PApplet.radians(20)*postureTolerance;
 		if (isValueBetween(angleL,0,PApplet.radians(10)+angleTolerance) && isValueBetween(angleR,0,PApplet.radians(10)+angleTolerance)) { // arms form a straight line
 			if (isValueBetween(angleVShape,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance)) { // arms angle ~90 degree
-				if (isValueBetween(angleToBody,0,PApplet.radians(90))) {// arms upwards 
+				if (isValueBetween(angleToBody,0,PApplet.radians(15)+angleTolerance)) { // sum of upper arms parallel to body y axis
 					return true;
 				}
 			}
@@ -719,11 +725,11 @@ public class Skeleton {
 		float angleUpperArms = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
 		float angleDownward = PVector.angleBetween(lUpperArmLocal,orientationY);
 		float angleForward = PVector.angleBetween(lUpperArmLocal,orientationZ);
-		float angleTolerance = PConstants.PI*postureTolerance;
+		float angleTolerance = PApplet.radians(20)*postureTolerance;
 		if (isValueBetween(angleL,0,PApplet.radians(10)+angleTolerance) && isValueBetween(angleR,0,PApplet.radians(10)+angleTolerance)) { // arms form a straight line
-			if (isValueBetween(angleUpperArms,0,PApplet.radians(10)+angleTolerance)) { // arms are parallel
+			if (isValueBetween(angleUpperArms,0,PApplet.radians(15)+angleTolerance)) { // arms are parallel
 				if (isValueBetween(angleDownward,PApplet.radians(130)-angleTolerance,PApplet.radians(140)+angleTolerance)) {// arms downward 45 degree 
-					if (isValueBetween(angleForward,0,PApplet.radians(90))) {// arms forward 
+					if (isValueBetween(angleForward,PApplet.radians(90),PApplet.radians(180))) {// arms forward 
 						return true;
 					}
 				}
