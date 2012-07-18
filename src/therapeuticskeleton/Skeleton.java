@@ -27,67 +27,74 @@ public class Skeleton {
 	public static final short RIGHT_KNEE = 13;
 	public static final short RIGHT_FOOT = 14;
 	
-	/** Upper body joints form no articulated shape */
-	public static final short NO_SHAPE = 0;
-	/** Upper body joints form articulated V shape: (H = hand, E = elbow, S = shoulder) <br>
-	 *  ---------------------- <br>
+	/** Upper body joints form no articulated pose */
+	public static final short NO_POSE = 0;
+	/** Upper body joints form articulated V shape on the local x-axis: (H = hand, E = elbow, S = shoulder) <br>
+	 *  on the x axis:------<br>
 	 *  H        H <br>
 	 *    E    E			= V <br>
 	 *      SS <br>
 	 *  ---------------------- */
 	public static final short V_SHAPE = 1;
-	/** Upper body joints form articulated A shape: (H = hand, E = elbow, S = shoulder)<br>
-	 *  ----------------------<br>
+	/** Upper body joints form articulated A shape on the local x-axis: (H = hand, E = elbow, S = shoulder)<br>
+	 *  on the x axis:------<br>
 	 *      SS<br>
 	 *    E    E			= A<br>
 	 *  H        H<br>
 	 *  ---------------------- */
 	public static final short A_SHAPE = 2;
-	/** Upper body joints form articulated U shape: (H = hand, E = elbow, S = shoulder)<br>
-	 *  ----------------------<br>
+	/** Upper body joints form articulated U shape on the local x-axis: (H = hand, E = elbow, S = shoulder)<br>
+	 *  on the x axis:------<br>
 	 *  H         H<br>
 	 *          			= U<br>
 	 *  E  SS  E<br>
 	 *  ---------------------- */
 	public static final short U_SHAPE = 3;
-	/** Upper body joints form articulated N shape: (H = hand, E = elbow, S = shoulder)<br>
-	 *  ----------------------<br>
+	/** Upper body joints form articulated N shape on the local x-axis: (H = hand, E = elbow, S = shoulder)<br>
+	 *  on the x axis:------<br>
 	 *  E  SS  E<br>
 	 *  					= N<br>
 	 *  H         H<br>
 	 *  ---------------------- */
 	public static final short N_SHAPE = 4;
-	/** Upper body joints form articulated M shape: (H = hand, E = elbow, S = shoulder)<br>
-	 *  ----------------------<br>
+	/** Upper body joints form articulated M shape on the local x-axis: (H = hand, E = elbow, S = shoulder)<br>
+	 *  on the x axis:------<br>
 	 *  E         E<br>
 	 *      SS  			= M<br>
 	 *  H         H<br>
 	 *  ---------------------- */
 	public static final short M_SHAPE = 5;
-	/** Upper body joints form articulated W shape: (H = hand, E = elbow, S = shoulder)<br>
-	 *  ----------------------<br>
+	/** Upper body joints form articulated W shape on the local x-axis: (H = hand, E = elbow, S = shoulder)<br>
+	 *  on the x axis:------<br>
 	 *  H         H<br>
 	 *      SS   			= W<br>
 	 *  E         E<br>
 	 *  ---------------------- */
 	public static final short W_SHAPE = 6;
-	/** Upper body joints form articulated O shape: (H = hand, E = elbow, S = shoulder)<br>
-	 *  --------------------------------------------<br>
+	/** Upper body joints form articulated O shape on the local x-axis: (H = hand, E = elbow, S = shoulder)<br>
+	 *  on the x axis:----------------------------<br>
 	 *      HH						        SS<br>
 	 *  E         E		= O = 		E        E<br>
 	 *      SS						        HH<br>
 	 *  -------------------------------------------- */
 	public static final short O_SHAPE = 7;
 	/** Upper body joints form articulated I shape: (H = hand, E = elbow, S = shoulder)<br>
-	 *  --------------------------------------------<br>
+	 *  on the x axis:----------------------------<br>
 	 *      HH							    SS<br>
 	 *      EE			= I =			    EE<br>
 	 *      SS							    HH<br>
 	 *  -------------------------------------------- */
 	public static final short I_SHAPE = 8;
+	/** Upper body joints form a pose holding the arms straight and the hands down to the level of the hips: (H = hand, E = elbow, S = shoulder)<br>
+	 *  on the z axis:----------------------------<br>
+	 *  SS<br>
+	 *      EE			= HANDS_FORWARD_DOWN<br>
+	 *          HH<br>
+	 *  -------------------------------------------- */
+	public static final short HANDS_FORWARD_DOWN_POSE = 9;
 	
 	// current upper body posture
-	private short currentUpperBodyPosture = NO_SHAPE;
+	private short currentUpperBodyPosture = NO_POSE;
 	private boolean postureEvaluated = false;
 	private float postureTolerance = 0.3f;
 	// The interface to talk to kinect
@@ -129,7 +136,6 @@ public class Skeleton {
 	// skeleton of user
 	private int userId;
 	
-
 	// -----------------------------------------------------------------
 	// CONSTRUCTORS AND STATECONTROL
 	/** Constructor for the Skeleton.
@@ -540,7 +546,7 @@ public class Skeleton {
 	
 	// -----------------------------------------------------------------
 	// POSTURE ACCESS
-	/** Evaluates if current upper body posture corresponds to one of the following shapes:<p>
+	/** Evaluates if current upper body posture corresponds to one of the following shapes on the local x-axis or to one of the other articulated poses:<p>
 	 *  (H = hand, E = elbow, S = shoulder)<br>
 	 *  ----------------------<br>
 	 *  H        H<br>
@@ -575,6 +581,11 @@ public class Skeleton {
 	 *      EE			= I =			    EE<br>
 	 *      SS							    HH<br>
 	 *  --------------------------------------------<br>
+	 *  on the z axis:----------------------------<br>
+	 *  SS<br>
+	 *      EE			= HANDS_FORWARD_DOWN<br>
+	 *          HH<br>
+	 *  --------------------------------------------
 	 *  @return current upper body posture. short, constants of Skeleton class */
 	public short evaluateUpperJointPosture () {
 		if (isUpdated && localCoordSysCalculated) {
@@ -586,11 +597,12 @@ public class Skeleton {
 			else if (evaluateWShape()) currentUpperBodyPosture = W_SHAPE;
 			else if (evaluateOShape()) currentUpperBodyPosture = O_SHAPE;
 			else if (evaluateIShape()) currentUpperBodyPosture = I_SHAPE;
-			else currentUpperBodyPosture = NO_SHAPE;
+			else if (evaluateHandsForwardDownPose()) currentUpperBodyPosture = HANDS_FORWARD_DOWN_POSE;
+			else currentUpperBodyPosture = NO_POSE;
 			postureEvaluated = true;
 			return currentUpperBodyPosture; 
 		} else {
-			currentUpperBodyPosture = NO_SHAPE;
+			currentUpperBodyPosture = NO_POSE;
 			postureEvaluated = false;
 			return currentUpperBodyPosture; 
 		}
@@ -601,7 +613,7 @@ public class Skeleton {
 		if (postureEvaluated)
 			return currentUpperBodyPosture; 
 		else
-			return currentUpperBodyPosture=Skeleton.NO_SHAPE;
+			return currentUpperBodyPosture=Skeleton.NO_POSE;
 	}
 	private boolean evaluateIShape() {
 		float angleLArm = PVector.angleBetween(lUpperArmLocal,lLowerArmLocal);
@@ -694,6 +706,24 @@ public class Skeleton {
 			if (isValueBetween(angleVShape,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance)) { // arms angle ~90 degree
 				if (isValueBetween(angleToBody,0,PApplet.radians(90))) {// arms upwards 
 					return true;
+				}
+			}
+		}
+		return false;
+	}
+	private boolean evaluateHandsForwardDownPose() {
+		float angleL = PVector.angleBetween(lUpperArmLocal,lLowerArmLocal);
+		float angleR = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
+		float angleUpperArms = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
+		float angleDownward = PVector.angleBetween(lUpperArmLocal,orientationY);
+		float angleForward = PVector.angleBetween(lUpperArmLocal,orientationZ);
+		float angleTolerance = PConstants.PI*postureTolerance;
+		if (isValueBetween(angleL,0,PApplet.radians(10)+angleTolerance) && isValueBetween(angleR,0,PApplet.radians(10)+angleTolerance)) { // arms form a straight line
+			if (isValueBetween(angleUpperArms,0,PApplet.radians(10)+angleTolerance)) { // arms are parallel
+				if (isValueBetween(angleDownward,PApplet.radians(130)-angleTolerance,PApplet.radians(140)+angleTolerance)) {// arms downward 45 degree 
+					if (isValueBetween(angleForward,0,PApplet.radians(90))) {// arms forward 
+						return true;
+					}
 				}
 			}
 		}
