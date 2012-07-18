@@ -92,6 +92,8 @@ public class Skeleton {
 	 *          HH<br>
 	 *  -------------------------------------------- */
 	public static final short HANDS_FORWARD_DOWN_POSE = 9;
+	/** Stores the number of available poses */
+	public static final short NUMBER_OF_POSES = 10;
 	
 	// current upper body posture
 	private short currentUpperBodyPosture = NO_POSE;
