@@ -1,5 +1,7 @@
 package therapeuticskeleton;
 
+import java.util.ArrayList;
+
 import SimpleOpenNI.SimpleOpenNI;
 import processing.core.*;
 
@@ -94,9 +96,18 @@ public class Skeleton {
 	public static final short HANDS_FORWARD_DOWN_POSE = 9;
 	/** Stores the number of available poses */
 	public static final short NUMBER_OF_POSES = 10;
-	
-	// current upper body posture
+	/** No gesture of the upper body joints is recognized */
+	public static final short NO_GESTURE = 0;
+	/** A push gesture of the upper body joints is recognized when the hand and elbow joints are pushed forward in a quick movement */
+	public static final short PUSH_GESTURE = 1;
+	/** Stores the number of available gestures */
+	public static final short NUMBER_OF_GESTURES = 2;
+	// current upper body posture and gesture
 	private short currentUpperBodyPosture = NO_POSE;
+	private short currentUpperBodyGesture = NO_GESTURE;
+	private int updateCycleLastBodyGestureRecognized = 0;
+	private boolean gestureEvaluated = false;
+	private float gestureTolerance = 0.3f;
 	private boolean postureEvaluated = false;
 	private float postureTolerance = 0.3f;
 	// The interface to talk to kinect
@@ -122,6 +133,9 @@ public class Skeleton {
 	// stores joint orientation
 	private PMatrix3D[] jointOrientations = new PMatrix3D[15];
 	private float[] confidenceJointOrientations = new float[15];
+	// stores past joint positions for gesture calculation. is only used when gesture evaluation is switched on.
+	private ArrayList<PVector[]> pastJointPositions = new ArrayList<PVector[]>();
+	public static final int maxPastJointPositions = 5;
 	// calculation of mirror plane
 	private PVector[] bodyPoints = new PVector[7]; // stores body points of skeleton 
 	private PVector	rMP = new PVector(); // MirrorPlane in HNF: r*n0-d=0
@@ -131,10 +145,12 @@ public class Skeleton {
 	private boolean calculateLocalCoordSys = true;
 	private boolean fullBodyTracking = true;
 	private short mirrorTherapy = MIRROR_THERAPY_OFF;
+	private boolean evaluatePostureAndGesture = true;
 	// controls state of skeleton
 	private boolean isUpdated = false;
 	private boolean mirrorPlaneCalculated = false;
 	private boolean localCoordSysCalculated = false;
+	private int updateCycles = 0; // count the number of update calls for time relevant calculations 
 	// skeleton of user
 	private int userId;
 	
@@ -146,11 +162,12 @@ public class Skeleton {
 	 *  @param _fullBodyTracking switches full body tracking on/off. If switched off, only upper body joints will be evaluated
 	 *  @param _calculateLocalCoordSys switches calculation of the local coordinate system on/off. If switched on, local coordination system will be calculated and joints will be transformed to it 
 	 *  @param _mirrorTherapy Sets the skeleton to mirror one body side to the other. When mirrorTherapy is set on, mirrorPlane will be calculated. Short value should correspond to skeleton constants. If out of range, mirror therapy will be switched off */
-	public Skeleton (SimpleOpenNI _kinect, int _userId, boolean _fullBodyTracking, boolean _calculateLocalCoordSys, short _mirrorTherapy) {
+	public Skeleton (SimpleOpenNI _kinect, int _userId, boolean _fullBodyTracking, boolean _calculateLocalCoordSys, boolean _evaluatePostureAndGesture, short _mirrorTherapy) {
 		kinect = _kinect;
 		userId = _userId;
 		fullBodyTracking = _fullBodyTracking;
 		calculateLocalCoordSys = _calculateLocalCoordSys;
+		evaluatePostureAndGesture = _evaluatePostureAndGesture;
 		if (_mirrorTherapy >= MIRROR_THERAPY_OFF && _mirrorTherapy <= MIRROR_THERAPY_RIGHT) 
 			mirrorTherapy = _mirrorTherapy;
 		for (int i=0; i<15; i++){
@@ -185,6 +202,9 @@ public class Skeleton {
 		mirrorPlaneCalculated = false;
 		postureEvaluated = false;
 		
+		if (evaluatePostureAndGesture) { // store past joint positions for gesture evaluation
+			updatePastJointPositions();
+		}
 		updateJointPositions();
 		updateJointOrientations();
 		
@@ -196,8 +216,13 @@ public class Skeleton {
 		if (calculateLocalCoordSys) {
 			calculateLocalCoordSys();
 			transformToLocalCoordSys();
+			if (evaluatePostureAndGesture) {
+				evaluateUpperJointPosture();
+				evaluateUpperJointGesture();
+			}
 		}
 		
+		updateCycles++;
 		isUpdated = true;
 	}
 	// -----------------------------------------------------------------
@@ -548,7 +573,8 @@ public class Skeleton {
 	
 	// -----------------------------------------------------------------
 	// POSTURE ACCESS
-	/** Evaluates if current upper body posture corresponds to one of the following shapes on the local x-axis or to one of the other articulated poses:<p>
+	/** Upper body posture is evaluated corresponding to one of the following shapes on the local x-axis or to one of the other articulated poses. 
+	 *  This method returns the evaluated upper body posture. works only if posture was calculated in the current update cycle<p>
 	 *  (H = hand, E = elbow, S = shoulder)<br>
 	 *  ----------------------<br>
 	 *  H        H<br>
@@ -588,9 +614,39 @@ public class Skeleton {
 	 *      EE			= HANDS_FORWARD_DOWN<br>
 	 *          HH<br>
 	 *  --------------------------------------------
-	 *  @return current upper body posture. short, constants of Skeleton class */
-	public short evaluateUpperJointPosture () {
-		if (isUpdated && localCoordSysCalculated) {
+	 *  @return current upper body posture. short, constants of Skeleton class, NO_POSE if posture was not updated */
+	public short getCurrentUpperBodyPosture() {
+		if (postureEvaluated)
+			return currentUpperBodyPosture; 
+		else
+			return currentUpperBodyPosture=Skeleton.NO_POSE;
+	}
+	/** Upper body gesture is evaluated corresponding to the following gestures. 
+	 *  --------------------------------------------<br>
+	 *  PUSH_GESTURE: A push gesture of the upper body joints is recognized when the hand and elbow joints are pushed forward in a quick movement <br>
+	 *  --------------------------------------------<br>
+	 *  @param _lookAtPastUpdateCycles the number of past update cycles during which the gesture should have been recognized.
+	 *  @return current upper body gesture. short, constants of Skeleton class, NO_GESTURE if no gesture was recognized in the given past update cycles or gesture evaluation is switched off */
+	public short getLastUpperBodyGesture (int _lookAtPastUpdateCycles) {
+		if (gestureEvaluated && updateCycleLastBodyGestureRecognized >= updateCycles-_lookAtPastUpdateCycles)
+			return currentUpperBodyGesture;
+		else
+			return Skeleton.NO_GESTURE;
+	}
+	private void evaluateUpperJointGesture () {
+		if (isUpdated && evaluatePostureAndGesture) {
+			if (evaluatePushGesture()) {
+				currentUpperBodyGesture = PUSH_GESTURE;
+				updateCycleLastBodyGestureRecognized = updateCycles;
+			} 
+			gestureEvaluated = true;
+		} else {
+			gestureEvaluated = false;
+		}
+	}
+	
+	private void evaluateUpperJointPosture () {
+		if (isUpdated && localCoordSysCalculated && evaluatePostureAndGesture) {
 			if (evaluateVShape()) currentUpperBodyPosture = V_SHAPE;
 			else if (evaluateAShape()) currentUpperBodyPosture = A_SHAPE;
 			else if (evaluateUShape()) currentUpperBodyPosture = U_SHAPE;
@@ -602,20 +658,15 @@ public class Skeleton {
 			else if (evaluateHandsForwardDownPose()) currentUpperBodyPosture = HANDS_FORWARD_DOWN_POSE;
 			else currentUpperBodyPosture = NO_POSE;
 			postureEvaluated = true;
-			return currentUpperBodyPosture; 
 		} else {
 			currentUpperBodyPosture = NO_POSE;
 			postureEvaluated = false;
-			return currentUpperBodyPosture; 
 		}
 	}
-	/** Returns the evaluated upper body posture. works only if posture was calculated in the current update cycle
-	 * @return current upper body posture. short, constants of Skeleton class. NO_SHAPE if posture was not updated */
-	public short getCurrentUpperBodyPosture() {
-		if (postureEvaluated)
-			return currentUpperBodyPosture; 
-		else
-			return currentUpperBodyPosture=Skeleton.NO_POSE;
+	
+	private boolean evaluatePushGesture () {
+		
+		return false;
 	}
 	private boolean evaluateIShape() {
 		float angleLArm = PVector.angleBetween(lUpperArmLocal,lLowerArmLocal);
@@ -838,6 +889,12 @@ public class Skeleton {
 	
 	// -----------------------------------------------------------------
 	// PRIVATE HELPER METHODS
+	private void updatePastJointPositions () {
+		if (pastJointPositions.size() > maxPastJointPositions) {
+			pastJointPositions.remove(0);
+		}
+		pastJointPositions.add(joints);
+	}
 	private void updateJointPositions () {
 		confidenceJoints[Skeleton.HEAD] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_HEAD,joints[Skeleton.HEAD]);
 		confidenceJoints[Skeleton.NECK] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_NECK,joints[Skeleton.NECK]);
