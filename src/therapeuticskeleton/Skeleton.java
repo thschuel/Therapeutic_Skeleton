@@ -1,7 +1,5 @@
 package therapeuticskeleton;
 
-import java.util.ArrayList;
-
 import SimpleOpenNI.SimpleOpenNI;
 import processing.core.*;
 
@@ -105,11 +103,16 @@ public class Skeleton {
 	// current upper body posture and gesture
 	private short currentUpperBodyPosture = NO_POSE;
 	private short currentUpperBodyGesture = NO_GESTURE;
-	private int updateCycleLastBodyGestureRecognized = 0;
+	private int updateCycleLastBodyGestureRecognized = -9999;
 	private boolean gestureEvaluated = false;
-	private float gestureTolerance = 0.3f;
 	private boolean postureEvaluated = false;
 	private float postureTolerance = 0.3f;
+	private float postureAngleTolerance = PApplet.radians(20)*postureTolerance;
+	private float gestureTolerance = 0.5f;
+	private float gestureAngleTolerance = PApplet.radians(20)*postureTolerance;
+	// defining variables for push gesture
+	private final int pushGestureMaxCycles = 30; // max update cycles to perform push gesture
+	public static int pushGestureStartCycle = -9999;
 	// The interface to talk to kinect
 	private SimpleOpenNI kinect;
 	// stores skeleton Points in 3d Space, global coordsys
@@ -133,9 +136,6 @@ public class Skeleton {
 	// stores joint orientation
 	private PMatrix3D[] jointOrientations = new PMatrix3D[15];
 	private float[] confidenceJointOrientations = new float[15];
-	// stores past joint positions for gesture calculation. is only used when gesture evaluation is switched on.
-	private ArrayList<PVector[]> pastJointPositions = new ArrayList<PVector[]>();
-	public static final int maxPastJointPositions = 5;
 	// calculation of mirror plane
 	private PVector[] bodyPoints = new PVector[7]; // stores body points of skeleton 
 	private PVector	rMP = new PVector(); // MirrorPlane in HNF: r*n0-d=0
@@ -150,7 +150,7 @@ public class Skeleton {
 	private boolean isUpdated = false;
 	private boolean mirrorPlaneCalculated = false;
 	private boolean localCoordSysCalculated = false;
-	private int updateCycles = 0; // count the number of update calls for time relevant calculations 
+	private int updateCycle = 0; // count the number of update calls for time relevant calculations 
 	// skeleton of user
 	private int userId;
 	
@@ -202,9 +202,6 @@ public class Skeleton {
 		mirrorPlaneCalculated = false;
 		postureEvaluated = false;
 		
-		if (evaluatePostureAndGesture) { // store past joint positions for gesture evaluation
-			updatePastJointPositions();
-		}
 		updateJointPositions();
 		updateJointOrientations();
 		
@@ -217,12 +214,12 @@ public class Skeleton {
 			calculateLocalCoordSys();
 			transformToLocalCoordSys();
 			if (evaluatePostureAndGesture) {
-				evaluateUpperJointPosture();
-				evaluateUpperJointGesture();
+				evaluateUpperBodyPosture();
+				evaluateUpperBodyGesture();
 			}
 		}
 		
-		updateCycles++;
+		updateCycle++;
 		isUpdated = true;
 	}
 	// -----------------------------------------------------------------
@@ -263,15 +260,32 @@ public class Skeleton {
 	/** Setter for the tolerance with which posture will be detected. 0..1f.
 	 *  @param the tolerance between 0..1f. when higher than 1 or lower than 0, default tolerance 0.3f will be set */
 	public void setPostureTolerance (float _postureTolerance) {
-		if (_postureTolerance >= 0f && _postureTolerance <= 1f)
+		if (_postureTolerance >= 0f && _postureTolerance <= 1f) {
 			postureTolerance = _postureTolerance;
-		else
+		} else {
 			postureTolerance = 0.3f; // default posture accuracy
+		}
+		postureAngleTolerance = PApplet.radians(20)*postureTolerance;
 	}
-	/** Getter for calculating the local coordinate system.
-	 *  @return true if calculating the local coordinate system is switched on */
+	/** Getter for posture tolerance
+	 *  @return the posture tolerance */
 	public float getPostureTolerance () {
 		return postureTolerance;
+	}
+	/** Setter for the tolerance with which gesture will be detected. 0..1f.
+	 *  @param the tolerance between 0..1f. when higher than 1 or lower than 0, default tolerance 0.5f will be set */
+	public void setGestureTolerance (float _gestureTolerance) {
+		if (_gestureTolerance >= 0f && _gestureTolerance <= 1f) {
+			gestureTolerance = _gestureTolerance;
+		} else {
+			gestureTolerance = 0.5f; // default gesture accuracy
+		}
+		gestureAngleTolerance = PApplet.radians(40)*gestureTolerance;
+	}
+	/** Getter for gesture tolerance
+	 *  @return the gesture tolerance */
+	public float getGestureTolerance () {
+		return gestureTolerance;
 	}
 	/** Getter for status of the skeleton. Is used as a lock, methods of skeleton will return unsafe values, as long update function is not done.
 	 *  @return true if the status of the skeleton is fully updated */
@@ -628,44 +642,66 @@ public class Skeleton {
 	 *  @param _lookAtPastUpdateCycles the number of past update cycles during which the gesture should have been recognized.
 	 *  @return current upper body gesture. short, constants of Skeleton class, NO_GESTURE if no gesture was recognized in the given past update cycles or gesture evaluation is switched off */
 	public short getLastUpperBodyGesture (int _lookAtPastUpdateCycles) {
-		if (gestureEvaluated && updateCycleLastBodyGestureRecognized >= updateCycles-_lookAtPastUpdateCycles)
+		if (gestureEvaluated && updateCycleLastBodyGestureRecognized >= updateCycle-_lookAtPastUpdateCycles)
 			return currentUpperBodyGesture;
 		else
 			return Skeleton.NO_GESTURE;
 	}
-	private void evaluateUpperJointGesture () {
-		if (isUpdated && evaluatePostureAndGesture) {
-			if (evaluatePushGesture()) {
-				currentUpperBodyGesture = PUSH_GESTURE;
-				updateCycleLastBodyGestureRecognized = updateCycles;
-			} 
-			gestureEvaluated = true;
-		} else {
-			gestureEvaluated = false;
-		}
+	// gesture and posture helper functions
+	private void evaluateUpperBodyGesture () {
+		if (evaluatePushGesture()) {
+			currentUpperBodyGesture = PUSH_GESTURE;
+			updateCycleLastBodyGestureRecognized = updateCycle;
+		} 
+		gestureEvaluated = true;
 	}
-	
-	private void evaluateUpperJointPosture () {
-		if (isUpdated && localCoordSysCalculated && evaluatePostureAndGesture) {
-			if (evaluateVShape()) currentUpperBodyPosture = V_SHAPE;
-			else if (evaluateAShape()) currentUpperBodyPosture = A_SHAPE;
-			else if (evaluateUShape()) currentUpperBodyPosture = U_SHAPE;
-			else if (evaluateNShape()) currentUpperBodyPosture = N_SHAPE;
-			else if (evaluateMShape()) currentUpperBodyPosture = M_SHAPE;
-			else if (evaluateWShape()) currentUpperBodyPosture = W_SHAPE;
-			else if (evaluateOShape()) currentUpperBodyPosture = O_SHAPE;
-			else if (evaluateIShape()) currentUpperBodyPosture = I_SHAPE;
-			else if (evaluateHandsForwardDownPose()) currentUpperBodyPosture = HANDS_FORWARD_DOWN_POSE;
-			else currentUpperBodyPosture = NO_POSE;
-			postureEvaluated = true;
-		} else {
-			currentUpperBodyPosture = NO_POSE;
-			postureEvaluated = false;
-		}
+	private void evaluateUpperBodyPosture () {
+		if (evaluateVShape()) currentUpperBodyPosture = V_SHAPE;
+		else if (evaluateAShape()) currentUpperBodyPosture = A_SHAPE;
+		else if (evaluateUShape()) currentUpperBodyPosture = U_SHAPE;
+		else if (evaluateNShape()) currentUpperBodyPosture = N_SHAPE;
+		else if (evaluateMShape()) currentUpperBodyPosture = M_SHAPE;
+		else if (evaluateWShape()) currentUpperBodyPosture = W_SHAPE;
+		else if (evaluateOShape()) currentUpperBodyPosture = O_SHAPE;
+		else if (evaluateIShape()) currentUpperBodyPosture = I_SHAPE;
+		else if (evaluateHandsForwardDownPose()) currentUpperBodyPosture = HANDS_FORWARD_DOWN_POSE;
+		else currentUpperBodyPosture = NO_POSE;
+		postureEvaluated = true;
 	}
-	
+	// evaluation functions
 	private boolean evaluatePushGesture () {
-		
+		// push gesture is found when a movement of the hands parallel to the body z-axis has occured and the end pose is reached. 
+		// The end pose is recognized when upper and lower arms form a straight line parallel to body z-axis. 
+		PVector rHandShoulder = PVector.sub(jointsLocal[RIGHT_SHOULDER],jointsLocal[RIGHT_HAND]);
+		PVector lHandShoulder = PVector.sub(jointsLocal[LEFT_SHOULDER],jointsLocal[LEFT_HAND]);
+		float angleRtoBodyZ = PVector.angleBetween(rHandShoulder, orientationZ);
+		float angleLtoBodyZ = PVector.angleBetween(lHandShoulder, orientationZ);
+		if (isValueBetween(angleRtoBodyZ,0,PApplet.radians(30)+gestureAngleTolerance) && isValueBetween(angleLtoBodyZ,0,PApplet.radians(30)+gestureAngleTolerance)) {
+			float handShoulderDistanceStartPose = 200f+200f*gestureTolerance;
+			if (rHandShoulder.mag() <= handShoulderDistanceStartPose && lHandShoulder.mag() <= handShoulderDistanceStartPose) {
+				// start pose recognized
+				pushGestureStartCycle = updateCycle;
+			}
+			if (updateCycle-pushGestureStartCycle <= pushGestureMaxCycles) {
+				float angleRightArm = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
+				float angleLeftArm = PVector.angleBetween(lUpperArmLocal,lLowerArmLocal);
+				if (isValueBetween(angleRightArm,0,PApplet.radians(30)+gestureAngleTolerance) && isValueBetween(angleLeftArm,0,PApplet.radians(30)+gestureAngleTolerance)) {
+					// arms form a straight line
+					float angleRightArmToBodyZ = PVector.angleBetween(rUpperArmLocal,orientationZ);
+					float angleLeftArmToBodyZ = PVector.angleBetween(lUpperArmLocal,orientationZ);
+					if (isValueBetween(angleRightArmToBodyZ,PApplet.radians(150)-gestureAngleTolerance,PApplet.radians(180)) && isValueBetween(angleLeftArmToBodyZ,PApplet.radians(150)-gestureAngleTolerance,PApplet.radians(180))) {
+						// arms are parallel to body z axis: end pose recognized
+						return true;
+					}
+				}
+			} else {
+				// didn't recognize end pose within max cycles
+				pushGestureStartCycle = -9999;
+			}
+		} else {
+			// the movement needs to be parallel to z axis all the time
+			pushGestureStartCycle = -9999;
+		}
 		return false;
 	}
 	private boolean evaluateIShape() {
@@ -673,10 +709,9 @@ public class Skeleton {
 		float angleRArm = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
 		float angleIShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
 		float angleToBodyY = PVector.angleBetween(lUpperArmLocal, orientationY);
-		float angleTolerance = PApplet.radians(20)*postureTolerance;
-		if (isValueBetween(angleLArm,0,PApplet.radians(10)+angleTolerance) && isValueBetween(angleRArm,0,PApplet.radians(10)+angleTolerance)) { // arms form a straight line
-			if (isValueBetween(angleIShape,0,PApplet.radians(15)+angleTolerance)) { // arms are parallel
-				if (isValueBetween(angleToBodyY,0,PApplet.radians(15)+angleTolerance)) { // arms are parallel to y body axis
+		if (isValueBetween(angleLArm,0,PApplet.radians(10)+postureAngleTolerance) && isValueBetween(angleRArm,0,PApplet.radians(10)+postureAngleTolerance)) { // arms form a straight line
+			if (isValueBetween(angleIShape,0,PApplet.radians(15)+postureAngleTolerance)) { // arms are parallel
+				if (isValueBetween(angleToBodyY,0,PApplet.radians(15)+postureAngleTolerance)) { // arms are parallel to y body axis
 					return true;
 				}
 			}
@@ -691,10 +726,9 @@ public class Skeleton {
 			float angleLLower = PVector.angleBetween(lLowerArmLocal,lUpperArmLocal);
 			float angleRLower = PVector.angleBetween(rLowerArmLocal,rUpperArmLocal);
 			float angleToBody = PVector.angleBetween(PVector.add(lUpperArmLocal,rUpperArmLocal),orientationY);
-			float angleTolerance = PApplet.radians(20)*postureTolerance;
-			if (isValueBetween(angleLUpper,PApplet.radians(40)-angleTolerance,PApplet.radians(50)+angleTolerance) && isValueBetween(angleRUpper,PApplet.radians(40)-angleTolerance,PApplet.radians(50)+angleTolerance)) { // ~45 degree
-				if (isValueBetween(angleLLower,PApplet.radians(95)-angleTolerance,PApplet.radians(105)+angleTolerance) && isValueBetween(angleRLower,PApplet.radians(95)-angleTolerance,PApplet.radians(105)+angleTolerance)) { // ~100 degree
-					if (isValueBetween(angleToBody,0,PApplet.radians(15)+angleTolerance)) { // sum of upper arms parallel to body y axis
+			if (isValueBetween(angleLUpper,PApplet.radians(40)-postureAngleTolerance,PApplet.radians(50)+postureAngleTolerance) && isValueBetween(angleRUpper,PApplet.radians(40)-postureAngleTolerance,PApplet.radians(50)+postureAngleTolerance)) { // ~45 degree
+				if (isValueBetween(angleLLower,PApplet.radians(95)-postureAngleTolerance,PApplet.radians(105)+postureAngleTolerance) && isValueBetween(angleRLower,PApplet.radians(95)-postureAngleTolerance,PApplet.radians(105)+postureAngleTolerance)) { // ~100 degree
+					if (isValueBetween(angleToBody,0,PApplet.radians(15)+postureAngleTolerance)) { // sum of upper arms parallel to body y axis
 						return true;
 					}
 				}
@@ -715,10 +749,9 @@ public class Skeleton {
 		float angleR = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
 		float angleNShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
 		float angleToBodyY = PVector.angleBetween(lLowerArmLocal,orientationY);
-		float angleTolerance = PApplet.radians(20)*postureTolerance;
-		if (isValueBetween(angleL,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance) && isValueBetween(angleR,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance)) { // arms angle ~90 degree
-			if (isValueBetween(angleNShape,PApplet.radians(170)-angleTolerance,PApplet.radians(180))) { // upper arms form a straight line
-				if (isValueBetween(angleToBodyY,PApplet.radians(165)-angleTolerance,PApplet.radians(180))) {// arms downwards 
+		if (isValueBetween(angleL,PApplet.radians(85)-postureAngleTolerance,PApplet.radians(95)+postureAngleTolerance) && isValueBetween(angleR,PApplet.radians(85)-postureAngleTolerance,PApplet.radians(95)+postureAngleTolerance)) { // arms angle ~90 degree
+			if (isValueBetween(angleNShape,PApplet.radians(170)-postureAngleTolerance,PApplet.radians(180))) { // upper arms form a straight line
+				if (isValueBetween(angleToBodyY,PApplet.radians(165)-postureAngleTolerance,PApplet.radians(180))) {// arms downwards 
 					return true;
 				}
 			}
@@ -730,10 +763,9 @@ public class Skeleton {
 		float angleR = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
 		float angleUShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
 		float angleToBodyY = PVector.angleBetween(lLowerArmLocal,orientationY);
-		float angleTolerance = PApplet.radians(20)*postureTolerance;
-		if (isValueBetween(angleL,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance) && isValueBetween(angleR,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance)) { // arms angle ~90 degree
-			if (isValueBetween(angleUShape,PApplet.radians(170)-angleTolerance,PApplet.radians(180))) { // upper arms form a straight line
-				if (isValueBetween(angleToBodyY,0,PApplet.radians(15)+angleTolerance)) {// arms upwards 
+		if (isValueBetween(angleL,PApplet.radians(85)-postureAngleTolerance,PApplet.radians(95)+postureAngleTolerance) && isValueBetween(angleR,PApplet.radians(85)-postureAngleTolerance,PApplet.radians(95)+postureAngleTolerance)) { // arms angle ~90 degree
+			if (isValueBetween(angleUShape,PApplet.radians(170)-postureAngleTolerance,PApplet.radians(180))) { // upper arms form a straight line
+				if (isValueBetween(angleToBodyY,0,PApplet.radians(15)+postureAngleTolerance)) {// arms upwards 
 					return true;
 				}
 			}
@@ -745,10 +777,9 @@ public class Skeleton {
 		float angleR = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
 		float angleAShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
 		float angleToBody = PVector.angleBetween(PVector.add(lUpperArmLocal,rUpperArmLocal),orientationY);
-		float angleTolerance = PApplet.radians(20)*postureTolerance;
-		if (isValueBetween(angleL,0,PApplet.radians(10)+angleTolerance) && isValueBetween(angleR,0,PApplet.radians(10)+angleTolerance)) { // arms form a straight line
-			if (isValueBetween(angleAShape,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance)) { // arms angle ~90 degree
-				if (isValueBetween(angleToBody,PApplet.radians(165)-angleTolerance,PApplet.radians(180))) { // sum of upper arms parallel to body y axis
+		if (isValueBetween(angleL,0,PApplet.radians(10)+postureAngleTolerance) && isValueBetween(angleR,0,PApplet.radians(10)+postureAngleTolerance)) { // arms form a straight line
+			if (isValueBetween(angleAShape,PApplet.radians(85)-postureAngleTolerance,PApplet.radians(95)+postureAngleTolerance)) { // arms angle ~90 degree
+				if (isValueBetween(angleToBody,PApplet.radians(165)-postureAngleTolerance,PApplet.radians(180))) { // sum of upper arms parallel to body y axis
 					return true;
 				}
 			}
@@ -760,10 +791,9 @@ public class Skeleton {
 		float angleR = PVector.angleBetween(rUpperArmLocal,rLowerArmLocal);
 		float angleVShape = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
 		float angleToBody = PVector.angleBetween(PVector.add(lUpperArmLocal,rUpperArmLocal),orientationY);
-		float angleTolerance = PApplet.radians(20)*postureTolerance;
-		if (isValueBetween(angleL,0,PApplet.radians(10)+angleTolerance) && isValueBetween(angleR,0,PApplet.radians(10)+angleTolerance)) { // arms form a straight line
-			if (isValueBetween(angleVShape,PApplet.radians(85)-angleTolerance,PApplet.radians(95)+angleTolerance)) { // arms angle ~90 degree
-				if (isValueBetween(angleToBody,0,PApplet.radians(15)+angleTolerance)) { // sum of upper arms parallel to body y axis
+		if (isValueBetween(angleL,0,PApplet.radians(10)+postureAngleTolerance) && isValueBetween(angleR,0,PApplet.radians(10)+postureAngleTolerance)) { // arms form a straight line
+			if (isValueBetween(angleVShape,PApplet.radians(85)-postureAngleTolerance,PApplet.radians(95)+postureAngleTolerance)) { // arms angle ~90 degree
+				if (isValueBetween(angleToBody,0,PApplet.radians(15)+postureAngleTolerance)) { // sum of upper arms parallel to body y axis
 					return true;
 				}
 			}
@@ -776,10 +806,9 @@ public class Skeleton {
 		float angleUpperArms = PVector.angleBetween(lUpperArmLocal, rUpperArmLocal);
 		float angleDownward = PVector.angleBetween(lUpperArmLocal,orientationY);
 		float angleForward = PVector.angleBetween(lUpperArmLocal,orientationZ);
-		float angleTolerance = PApplet.radians(20)*postureTolerance;
-		if (isValueBetween(angleL,0,PApplet.radians(10)+angleTolerance) && isValueBetween(angleR,0,PApplet.radians(10)+angleTolerance)) { // arms form a straight line
-			if (isValueBetween(angleUpperArms,0,PApplet.radians(15)+angleTolerance)) { // arms are parallel
-				if (isValueBetween(angleDownward,PApplet.radians(130)-angleTolerance,PApplet.radians(140)+angleTolerance)) {// arms downward 45 degree 
+		if (isValueBetween(angleL,0,PApplet.radians(10)+postureAngleTolerance) && isValueBetween(angleR,0,PApplet.radians(10)+postureAngleTolerance)) { // arms form a straight line
+			if (isValueBetween(angleUpperArms,0,PApplet.radians(15)+postureAngleTolerance)) { // arms are parallel
+				if (isValueBetween(angleDownward,PApplet.radians(130)-postureAngleTolerance,PApplet.radians(140)+postureAngleTolerance)) {// arms downward 45 degree 
 					if (isValueBetween(angleForward,PApplet.radians(90),PApplet.radians(180))) {// arms forward 
 						return true;
 					}
@@ -888,13 +917,7 @@ public class Skeleton {
 	}
 	
 	// -----------------------------------------------------------------
-	// PRIVATE HELPER METHODS
-	private void updatePastJointPositions () {
-		if (pastJointPositions.size() > maxPastJointPositions) {
-			pastJointPositions.remove(0);
-		}
-		pastJointPositions.add(joints);
-	}
+	// PRIVATE HELPER METHODS}
 	private void updateJointPositions () {
 		confidenceJoints[Skeleton.HEAD] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_HEAD,joints[Skeleton.HEAD]);
 		confidenceJoints[Skeleton.NECK] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_NECK,joints[Skeleton.NECK]);
