@@ -348,6 +348,26 @@ public class Skeleton {
 	public PVector getRightLowerArm() {
 		return rLowerArm;
 	}
+	/** The angle between the left upper Arm and the body axis. 
+	 *  @return The angle between the left upper Arm and the body axis.*/
+	public float getAngleLeftUpperArm() {
+		return PVector.angleBetween(lUpperArmLocal,orientationY);
+	}
+	/** The angle between the left lower Arm and the left upper arm. 
+	 *  @return The angle between the left lower Arm and the left upper arm.*/
+	public float getAngleLeftLowerArm() {
+		return PVector.angleBetween(lLowerArmLocal,lUpperArmLocal);
+	}
+	/** The angle between the right upper Arm and the body axis. 
+	 *  @return The angle between the right upper Arm and the body axis.*/
+	public float getAngleRightUpperArm() {
+		return PVector.angleBetween(rUpperArmLocal,orientationY);
+	}
+	/** The angle between the right lower Arm and the right upper arm. 
+	 *  @return The angle between the right lower Arm and the right upper arm.*/
+	public float getAngleRightLowerArm() {
+		return PVector.angleBetween(rLowerArmLocal,rUpperArmLocal);
+	}
 	/** The vectors for the lower and upper arms are calculated for convenience. The arms in the local coordinate system are calculated only if calculateLocalCoordSys was set.
 	 *  @return The vector for the left upper arm in the local coordinate system. If localCoordSys was not calculated: 0-vector */
 	public PVector getLeftUpperArmLocal() {
