@@ -146,14 +146,14 @@ public class Skeleton {
 		
 		if (mirrorTherapy != MIRROR_THERAPY_OFF) {
 			math.calculateMirrorPlane();
+			mirrorPlaneCalculated = true;
 			updateMirroredJointPositions();
 			updateMirroredJointOrientations();
-			mirrorPlaneCalculated = true;
 		}
 		if (calculateLocalCoordSys) {
 			math.calculateLocalCoordSys();
-			transformToLocalCoordSys();
 			localCoordSysCalculated = true;
+			transformToLocalCoordSys();
 			if (evaluatePostureAndGesture) {
 				posture.evaluate();
 				postureEvaluated = true;
@@ -268,7 +268,7 @@ public class Skeleton {
 	 *  This method returns the joint position of a certain joint in the local coordinate system. Works only if localCoordSysCalculated is true.
 	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
 	 *  @return The position of a certain joint in the local coordinate system as vector. If jointType out of range or if localCoordSys was not calculated: 0-vector */
-	public PVector getJointLocalCoordSys (short jointType) {
+	public PVector getJointLCS (short jointType) {
 		if (jointType >= 0 && jointType <= 14 && localCoordSysCalculated) 
 			return jointsLocal[jointType];
 		else
@@ -316,7 +316,7 @@ public class Skeleton {
 	}
 	/** The vectors for the lower and upper arms are calculated for convenience. The arms in the local coordinate system are calculated only if calculateLocalCoordSys was set.
 	 *  @return The vector for the left upper arm in the local coordinate system. If localCoordSys was not calculated: 0-vector */
-	public PVector getLeftUpperArmLocal() {
+	public PVector getLeftUpperArmLCS() {
 		if (localCoordSysCalculated)
 			return lUpperArmLocal;
 		else
@@ -324,7 +324,7 @@ public class Skeleton {
 	}
 	/** The vectors for the lower and upper arms are calculated for convenience. The arms in the local coordinate system are calculated only if calculateLocalCoordSys was set.
 	 *  @return The vector for the left lower arm in the local coordinate system. If localCoordSys was not calculated: 0-vector */
-	public PVector getRightUpperArmLocal() {
+	public PVector getRightUpperArmLCS() {
 		if (localCoordSysCalculated)
 			return lLowerArmLocal;
 		else
@@ -332,7 +332,7 @@ public class Skeleton {
 	}
 	/** The vectors for the lower and upper arms are calculated for convenience. The arms in the local coordinate system are calculated only if calculateLocalCoordSys was set.
 	 *  @return The vector for the right upper arm in the local coordinate system. If localCoordSys was not calculated: 0-vector */
-	public PVector getLeftLowerArmLocal() {
+	public PVector getLeftLowerArmLCS() {
 		if (localCoordSysCalculated)
 			return rUpperArmLocal;
 		else
@@ -340,7 +340,7 @@ public class Skeleton {
 	}
 	/** The vectors for the lower and upper arms are calculated for convenience. The arms in the local coordinate system are calculated only if calculateLocalCoordSys was set.
 	 *  @return The vector for the right lower arm in the local coordinate system. If localCoordSys was not calculated: 0-vector */
-	public PVector getRightLowerArmLocal() {
+	public PVector getRightLowerArmLCS() {
 		if (localCoordSysCalculated)
 			return rLowerArmLocal;
 		else

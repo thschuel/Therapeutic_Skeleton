@@ -70,8 +70,8 @@ public class SkeletonGesture {
 	private boolean evaluatePushGesture (int _updateCycle) {
 		// push gesture is found when a movement of the hands parallel to the body z-axis has occured and the end pose is reached. 
 		// The end pose is recognized when upper and lower arms form a straight line parallel to body z-axis. 
-		PVector rHandShoulder = PVector.sub(skeleton.getJointLocalCoordSys(Skeleton.RIGHT_SHOULDER),skeleton.getJointLocalCoordSys(Skeleton.RIGHT_HAND));
-		PVector lHandShoulder = PVector.sub(skeleton.getJointLocalCoordSys(Skeleton.LEFT_SHOULDER),skeleton.getJointLocalCoordSys(Skeleton.LEFT_HAND));
+		PVector rHandShoulder = PVector.sub(skeleton.getJointLCS(Skeleton.RIGHT_SHOULDER),skeleton.getJointLCS(Skeleton.RIGHT_HAND));
+		PVector lHandShoulder = PVector.sub(skeleton.getJointLCS(Skeleton.LEFT_SHOULDER),skeleton.getJointLCS(Skeleton.LEFT_HAND));
 		float angleRtoBodyZ = PVector.angleBetween(rHandShoulder, skeleton.getOrientationZ());
 		float angleLtoBodyZ = PVector.angleBetween(lHandShoulder, skeleton.getOrientationZ());
 		if (SkeletonMath.isValueBetween(angleRtoBodyZ,0,PApplet.radians(30)+gestureAngleTolerance) && SkeletonMath.isValueBetween(angleLtoBodyZ,0,PApplet.radians(30)+gestureAngleTolerance)) {
@@ -81,12 +81,12 @@ public class SkeletonGesture {
 				pushGestureStartCycle = _updateCycle;
 			}
 			if (_updateCycle-pushGestureStartCycle <= pushGestureMaxCycles) {
-				float angleRightArm = PVector.angleBetween(skeleton.getRightUpperArmLocal(),skeleton.getRightLowerArmLocal());
-				float angleLeftArm = PVector.angleBetween(skeleton.getLeftUpperArmLocal(),skeleton.getLeftLowerArmLocal());
+				float angleRightArm = PVector.angleBetween(skeleton.getRightUpperArmLCS(),skeleton.getRightLowerArmLCS());
+				float angleLeftArm = PVector.angleBetween(skeleton.getLeftUpperArmLCS(),skeleton.getLeftLowerArmLCS());
 				if (SkeletonMath.isValueBetween(angleRightArm,0,PApplet.radians(30)+gestureAngleTolerance) && SkeletonMath.isValueBetween(angleLeftArm,0,PApplet.radians(30)+gestureAngleTolerance)) {
 					// arms form a straight line
-					float angleRightArmToBodyZ = PVector.angleBetween(skeleton.getRightUpperArmLocal(),skeleton.getOrientationZ());
-					float angleLeftArmToBodyZ = PVector.angleBetween(skeleton.getLeftUpperArmLocal(),skeleton.getOrientationZ());
+					float angleRightArmToBodyZ = PVector.angleBetween(skeleton.getRightUpperArmLCS(),skeleton.getOrientationZ());
+					float angleLeftArmToBodyZ = PVector.angleBetween(skeleton.getLeftUpperArmLCS(),skeleton.getOrientationZ());
 					if (SkeletonMath.isValueBetween(angleRightArmToBodyZ,PApplet.radians(150)-gestureAngleTolerance,PApplet.radians(180)) && SkeletonMath.isValueBetween(angleLeftArmToBodyZ,PApplet.radians(150)-gestureAngleTolerance,PApplet.radians(180))) {
 						// arms are parallel to body z axis: end pose recognized
 						return true;
