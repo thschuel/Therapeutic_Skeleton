@@ -29,7 +29,6 @@ package therapeuticskeleton;
 
 import SimpleOpenNI.SimpleOpenNI;
 import processing.core.*;
-import utils.*;
 
 public class Skeleton {
 

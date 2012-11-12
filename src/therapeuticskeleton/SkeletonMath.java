@@ -1,4 +1,4 @@
-package utils;
+package therapeuticskeleton;
 
 public class SkeletonMath {
 

@@ -1,4 +1,4 @@
-package utils;
+package therapeuticskeleton;
 
 import processing.core.*;
 import therapeuticskeleton.*;

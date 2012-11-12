@@ -1,8 +1,7 @@
-package utils;
+package therapeuticskeleton;
 
 import processing.core.PApplet;
 import processing.core.PVector;
-import therapeuticskeleton.Skeleton;
 
 public class SkeletonPosture {
 	/** Upper body joints form no articulated pose */
