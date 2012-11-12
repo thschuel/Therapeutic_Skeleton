@@ -224,6 +224,39 @@ public class Skeleton {
 	public int getUserId() {
 		return userId;
 	}
+	/** Setter for the tolerance with which gesture will be detected. 0..1f.
+	 *  @param the tolerance between 0..1f. when higher than 1 or lower than 0, default tolerance 0.5f will be set */
+	public void setGestureTolerance (float _gestureTolerance) {
+		if (gesture != null) {
+			gesture.setGestureTolerance(_gestureTolerance);
+		}
+	}
+	/** Getter for gesture tolerance
+	 *  @return the gesture tolerance or -1f if gesture evaluation is not activated*/
+	public float getGestureTolerance () {
+		if (gesture != null) {
+			return gesture.getGestureTolerance();
+		} else {
+			return -1f;
+		}
+	}
+	/** Setter for the tolerance with which posture will be detected. 0..1f.
+	 *  @param the tolerance between 0..1f. when higher than 1 or lower than 0, default tolerance 0.3f will be set */
+	public void setPostureTolerance (float _postureTolerance) {
+		if (posture != null){
+			posture.setPostureTolerance(_postureTolerance);
+		}
+	}
+	/** Getter for posture tolerance
+	 *  @return the posture tolerance or -1f if posture evaluation is not activated */
+	public float getPostureTolerance () {
+		if (posture != null) {
+			return posture.getPostureTolerance();
+		} else {
+			return -1f;
+		}
+	}
+	
 	/** This method returns the joint position of a certain joint in the global coordinate system
 	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
 	 *  @return The position of a certain joint in the global coordinate system as vector. If jointType out of range: 0-vector */

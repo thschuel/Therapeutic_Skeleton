@@ -1,7 +1,6 @@
 package therapeuticskeleton;
 
 import processing.core.*;
-import therapeuticskeleton.*;
 
 public class SkeletonGesture {
 
