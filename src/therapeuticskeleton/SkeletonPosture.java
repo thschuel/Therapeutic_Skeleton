@@ -231,7 +231,7 @@ public class SkeletonPosture {
 	}
 	private boolean evaluateAShape() {
 		float angleL = PVector.angleBetween(skeleton.getLeftUpperArmLCS(),skeleton.getLeftLowerArmLCS());
-		float angleR = PVector.angleBetween(skeleton.getRightUpperArmLCS(),skeleton.getLeftLowerArmLCS());
+		float angleR = PVector.angleBetween(skeleton.getRightUpperArmLCS(),skeleton.getRightLowerArmLCS());
 		float angleAShape = PVector.angleBetween(skeleton.getLeftUpperArmLCS(), skeleton.getRightUpperArmLCS());
 		float angleToBody = PVector.angleBetween(PVector.add(skeleton.getLeftUpperArmLCS(),skeleton.getRightUpperArmLCS()),skeleton.getOrientationY());
 		if (SkeletonMath.isValueBetween(angleL,0,PApplet.radians(10)+postureAngleTolerance) && SkeletonMath.isValueBetween(angleR,0,PApplet.radians(10)+postureAngleTolerance)) { // arms form a straight line
