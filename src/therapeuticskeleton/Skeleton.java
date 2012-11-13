@@ -30,6 +30,13 @@ package therapeuticskeleton;
 import SimpleOpenNI.SimpleOpenNI;
 import processing.core.*;
 
+/** Skeleton represents a humanoid skeleton in 3d space that is tracked by Microsoft Kinect/Primensense sensor, openNI driver and SimpleOpenNI Java Library. 
+ *  Skeleton provides basic calculations on joint position and angles. It provides access to joint and limb vectors. 
+ *  Skeleton is meant as Processing middleware library for therapeutic purposes. For neurologic therapy, mirroring of body sides is available.
+ *  Detection of certain body posture and gestures is implemented. See classes SkeletonPosture and SkeletonGesture for details.
+ *  Classes in this package (therapeuticskeleton) are not meant to be used alone. 
+ *  Please contact me, if you want to know more or are willing to work on this project. (thschuel@uos.de)
+ * */
 public class Skeleton {
 
 	// mirror therapy modes
