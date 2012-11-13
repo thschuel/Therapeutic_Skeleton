@@ -75,7 +75,7 @@ public class SkeletonPosture {
 	// current upper body posture and gesture
 	private short currentUpperBodyPosture = NO_POSE;
 	
-	private float postureTolerance = 0.3f;
+	private float postureTolerance = 0.5f;
 	private float postureAngleTolerance = PApplet.radians(20)*postureTolerance;
 
 	private Skeleton skeleton = null;
@@ -90,7 +90,7 @@ public class SkeletonPosture {
 		if (_postureTolerance >= 0f && _postureTolerance <= 1f) {
 			postureTolerance = _postureTolerance;
 		} else {
-			postureTolerance = 0.3f; // default posture accuracy
+			postureTolerance = 0.5f; // default posture accuracy
 		}
 		postureAngleTolerance = PApplet.radians(20)*postureTolerance;
 	}

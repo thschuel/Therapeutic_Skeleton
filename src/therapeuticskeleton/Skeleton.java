@@ -110,7 +110,8 @@ public class Skeleton {
 		fullBodyTracking = _fullBodyTracking;
 		calculateLocalCoordSys = _calculateLocalCoordSys;
 		evaluatePostureAndGesture = _evaluatePostureAndGesture;
-		if (_mirrorTherapy >= MIRROR_THERAPY_OFF && _mirrorTherapy <= MIRROR_THERAPY_RIGHT) mirrorTherapy = _mirrorTherapy;
+		if (_mirrorTherapy >= MIRROR_THERAPY_OFF && _mirrorTherapy <= MIRROR_THERAPY_RIGHT) 
+			mirrorTherapy = _mirrorTherapy;
 		setup();
 	}
 	/** Constructor for the Skeleton. Defaults used for setup.
@@ -326,7 +327,7 @@ public class Skeleton {
 	 *  @return The vector for the left lower arm in the local coordinate system. If localCoordSys was not calculated: 0-vector */
 	public PVector getRightUpperArmLCS() {
 		if (localCoordSysCalculated)
-			return lLowerArmLocal;
+			return rUpperArmLocal;
 		else
 			return new PVector();
 	}
@@ -334,7 +335,7 @@ public class Skeleton {
 	 *  @return The vector for the right upper arm in the local coordinate system. If localCoordSys was not calculated: 0-vector */
 	public PVector getLeftLowerArmLCS() {
 		if (localCoordSysCalculated)
-			return rUpperArmLocal;
+			return lLowerArmLocal;
 		else
 			return new PVector();
 	}
