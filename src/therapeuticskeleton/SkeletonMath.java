@@ -84,7 +84,7 @@ public class SkeletonMath {
 		transformCoordSysInv.invert();
 	}
 	// transform joint coordinates to local coordsys. 
-	public PVector getLocalVector (PVector globalVector) {
+	public PVector getJointLCS (PVector globalVector) {
 			PVector localVector = new PVector();
 			transformCoordSysInv.mult(globalVector,localVector);
 			return localVector;
