@@ -118,12 +118,13 @@ public class Skeleton {
 	 *  @param _calculateLocalCoordSys switches calculation of the local coordinate system on/off. If switched on, local coordination system will be calculated and joints will be transformed to it 
 	 *  @param _evaluatePostureAndGesture switches calculation of the posture and gesture on/off. Switching it on requires local coord sys to be calculated 
 	 *  @param _mirrorTherapy Sets the skeleton to mirror one body side to the other. When mirrorTherapy is set on, mirrorPlane will be calculated. Short value should correspond to skeleton constants. If out of range, mirror therapy will be switched off */
-	public Skeleton (SimpleOpenNI _kinect, int _userId, boolean _fullBodyTracking, boolean _calculateLocalCoordSys, boolean _evaluatePostureAndGesture, short _mirrorTherapy) {
+	public Skeleton (SimpleOpenNI _kinect, int _userId, boolean _fullBodyTracking, boolean _calculateLocalCoordSys, boolean _evaluatePostureAndGesture, short _mirrorTherapy, boolean _evaluateStatistics) {
 		kinect = _kinect;
 		userId = _userId;
 		fullBodyTracking = _fullBodyTracking;
 		calculateLocalCoordSys = _calculateLocalCoordSys;
 		evaluatePostureAndGesture = _evaluatePostureAndGesture;
+		evaluateStatistics = _evaluateStatistics;
 		if (_mirrorTherapy >= MIRROR_THERAPY_OFF && _mirrorTherapy <= MIRROR_THERAPY_RIGHT) 
 			mirrorTherapy = _mirrorTherapy;
 		setup();

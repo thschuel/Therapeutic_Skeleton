@@ -51,10 +51,14 @@ public class SkeletonStatistics {
 	}
 	
 	public void update () {
-		PVector tempLeftHand = skeleton.getJoint(Skeleton.LEFT_HAND);
-		PVector tempLeftElbow = skeleton.getJoint(Skeleton.LEFT_ELBOW);
-		PVector tempRightHand = skeleton.getJoint(Skeleton.RIGHT_HAND);
-		PVector tempRightElbow = skeleton.getJoint(Skeleton.RIGHT_ELBOW);
+		PVector tempLeftHand = new PVector();
+		tempLeftHand.set(skeleton.getJoint(Skeleton.LEFT_HAND));
+		PVector tempLeftElbow = new PVector();
+		tempLeftElbow.set(skeleton.getJoint(Skeleton.LEFT_ELBOW));
+		PVector tempRightHand = new PVector();
+		tempRightHand.set(skeleton.getJoint(Skeleton.RIGHT_HAND));
+		PVector tempRightElbow = new PVector();
+		tempRightElbow.set(skeleton.getJoint(Skeleton.RIGHT_ELBOW));
 		
 		if (historyLeftHand.size() > 0) {
 			PVector prevLeftHand = historyLeftHand.get(historyLeftHand.size()-1);
@@ -73,7 +77,6 @@ public class SkeletonStatistics {
 			distancePerSecondLeftElbow = currentDistanceLeftElbow/skeleton.getFrameRate();
 			distancePerSecondRightHand = currentDistanceRightHand/skeleton.getFrameRate();
 			distancePerSecondRightElbow = currentDistanceRightElbow/skeleton.getFrameRate();
-			
 		}
 
 		if (tempLeftHand.x > maxXLeftHand) maxXLeftHand = tempLeftHand.x;
