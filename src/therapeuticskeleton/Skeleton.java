@@ -72,7 +72,7 @@ public class Skeleton {
 	// stores joint orientation
 	private PMatrix3D[] jointOrientation = new PMatrix3D[15];
 	private float[] jointOrientationConfidence = new float[15];
-	// stores velocity of joints
+	// stores distance of joints to last position of joints
 	private float[] jointDelta = new float[15];
 	
 	// for convenience store vectors of upper arms and lower arms
@@ -90,9 +90,12 @@ public class Skeleton {
 	private boolean fullBodyTracking = true;
 	private short mirrorTherapy = MIRROR_THERAPY_OFF;
 	private boolean evaluatePostureAndGesture = true;
+	private boolean evaluateStatistics = true;
 	// control state of skeleton
 	private boolean isUpdated = false;
-	private int updateCycle = 0; // count the number of update calls for time relevant calculations 
+	private int updateCycle = 0; // count the number of update calls for time relevant calculations //TODO: use frameCount instead 
+	private int frameCount = 0;
+	private float frameRate = 0;
 	// skeleton of user
 	private int userId;
 
@@ -104,6 +107,7 @@ public class Skeleton {
 	private SkeletonMath math = null;
 	private boolean mirrorPlaneCalculated = false;
 	private boolean localCoordSysCalculated = false;
+	private SkeletonStatistics statistics = null;
 	
 	// -----------------------------------------------------------------
 	// CONSTRUCTORS AND STATECONTROL
@@ -143,15 +147,20 @@ public class Skeleton {
 		posture = new SkeletonPosture(this);
 		gesture = new SkeletonGesture(this);
 		math = new SkeletonMath(this);
+		statistics = new SkeletonStatistics(this);
 	}
 
-	/** Update method. Call it to update status of skeleton. Skeleton will talk to SimpleOpenNI directly and will do all the necessary math for updating its status according to set up */
-	public void update () {
+	/** Update method. Call it to update status of skeleton. Skeleton will talk to SimpleOpenNI directly and will do all the necessary math for updating its status according to set up 
+	 *  @param _frameCount the current frame of PApplet, used for statistics
+	 *  @param _frameRate the current frame rate of PApplet, used for statistics */
+	public void update (int _frameCount, float _frameRate) {
 		isUpdated = false;
 		localCoordSysCalculated = false;
 		mirrorPlaneCalculated = false;
 		gestureEvaluated = false;
 		postureEvaluated = false;
+		frameCount = _frameCount;
+		frameRate = _frameRate;
 		
 		updateJointPositions();
 		updateJointOrientations();
@@ -174,7 +183,11 @@ public class Skeleton {
 			}
 		}
 		
-		updateCycle++;
+		if (evaluateStatistics) {
+			statistics.update();
+		}
+		
+		updateCycle++; //TODO: use framerate instead of updateCycles
 		isUpdated = true;
 	}
 	
@@ -256,7 +269,27 @@ public class Skeleton {
 			return -1f;
 		}
 	}
+	
+	// -----------------------------------------------------------------
+	// GETTERS FOR STATE OF SKELETON
+	/** Getter for frame count. Used for statistics
+	 *  @return the current frame count */
+	public int getFrameCount () {
+		return frameCount;
+	}
+	/** Getter for frame rate. Used for statistics
+	 *  @return the current frame rate */
+	public float getFrameRate () {
+		return frameRate;
+	}
 
+	// -----------------------------------------------------------------
+	// GETTERS FOR STATISTICS OF SKELETON
+	/** Getter for SkeletonStatistics. The whole class object is returned to be displayed in the main applet.
+	 *  @return the skeleton statistics object */
+	public SkeletonStatistics getStatistics () {
+		return statistics;
+	}
 	
 	// -----------------------------------------------------------------
 	// ACCESS TO JOINTS AND JOINT INFORMATION
