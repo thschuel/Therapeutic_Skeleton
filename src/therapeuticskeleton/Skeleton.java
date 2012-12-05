@@ -558,7 +558,7 @@ public class Skeleton {
 		else
 			return 0f;
 	}
-	/** returns the origin of the local coordsys. Equals Torso Vector. works only if localCoordSys has been calculated
+	/** returns the origin of the local coordsys. Equals Neck Vector. works only if localCoordSys has been calculated
 	 *  @return the origin. 0-vector if localCoordSys has not been calculated */
 	public PVector getOrigin () {
 		if (localCoordSysCalculated && math != null)
