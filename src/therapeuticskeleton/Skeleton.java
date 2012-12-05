@@ -31,6 +31,7 @@ import SimpleOpenNI.SimpleOpenNI;
 import processing.core.*;
 
 /** Skeleton represents a humanoid skeleton in 3d space that is tracked by Microsoft Kinect/Primensense sensor, openNI driver and SimpleOpenNI Java Library. 
+ *  As a primary difference to the build-in skeleton data of OpenNI, this Skeleton takes the anatomical viewpoint for left/right labeling of body parts. <br>
  *  Skeleton provides basic calculations on joint position and angles. It provides access to joint and limb vectors. 
  *  Skeleton is meant as Processing middleware library for therapeutic purposes. For neurologic therapy, mirroring of body sides is available.
  *  Detection of certain body posture and gestures is implemented. See classes SkeletonPosture and SkeletonGesture for details.
@@ -659,46 +660,95 @@ public class Skeleton {
 		jointConfidence[NECK] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_NECK,tempJoint);
 		jointDelta[NECK] = (PVector.sub(joint[NECK],tempJoint)).mag();
 		joint[NECK].set(tempJoint);
-		jointConfidence[LEFT_SHOULDER] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_SHOULDER,tempJoint);
-		jointDelta[LEFT_SHOULDER] = (PVector.sub(joint[LEFT_SHOULDER],tempJoint)).mag();
-		joint[LEFT_SHOULDER].set(tempJoint);
-		jointConfidence[RIGHT_SHOULDER] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_SHOULDER,tempJoint);
-		jointDelta[RIGHT_SHOULDER] = (PVector.sub(joint[RIGHT_SHOULDER],tempJoint)).mag();
-		joint[RIGHT_SHOULDER].set(tempJoint);
+		
+		// OpenNI sets labels for left/right from the camera viewpoint. Here the anatomically correct labels are set.
+		boolean setAnatomicallyCorrectLabels = true;
+		if (setAnatomicallyCorrectLabels) {
+			jointConfidence[LEFT_SHOULDER] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_SHOULDER,tempJoint);
+			jointDelta[LEFT_SHOULDER] = (PVector.sub(joint[LEFT_SHOULDER],tempJoint)).mag();
+			joint[LEFT_SHOULDER].set(tempJoint);
+			jointConfidence[RIGHT_SHOULDER] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_SHOULDER,tempJoint);
+			jointDelta[RIGHT_SHOULDER] = (PVector.sub(joint[RIGHT_SHOULDER],tempJoint)).mag();
+			joint[RIGHT_SHOULDER].set(tempJoint);
+			jointConfidence[LEFT_ELBOW] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_ELBOW,tempJoint);
+			jointDelta[LEFT_ELBOW] = (PVector.sub(joint[LEFT_ELBOW],tempJoint)).mag();
+			joint[LEFT_ELBOW].set(tempJoint);
+			jointConfidence[LEFT_HAND] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HAND,tempJoint);
+			jointDelta[LEFT_HAND] = (PVector.sub(joint[LEFT_HAND],tempJoint)).mag();
+			joint[LEFT_HAND].set(tempJoint);
+			jointConfidence[RIGHT_ELBOW] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_ELBOW,tempJoint);
+			jointDelta[RIGHT_ELBOW] = (PVector.sub(joint[RIGHT_ELBOW],tempJoint)).mag();
+			joint[RIGHT_ELBOW].set(tempJoint);
+			jointConfidence[RIGHT_HAND] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HAND,tempJoint);
+			jointDelta[RIGHT_HAND] = (PVector.sub(joint[RIGHT_HAND],tempJoint)).mag();
+			joint[RIGHT_HAND].set(tempJoint);
+		} else {
+			jointConfidence[LEFT_SHOULDER] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_SHOULDER,tempJoint);
+			jointDelta[LEFT_SHOULDER] = (PVector.sub(joint[LEFT_SHOULDER],tempJoint)).mag();
+			joint[LEFT_SHOULDER].set(tempJoint);
+			jointConfidence[RIGHT_SHOULDER] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_SHOULDER,tempJoint);
+			jointDelta[RIGHT_SHOULDER] = (PVector.sub(joint[RIGHT_SHOULDER],tempJoint)).mag();
+			joint[RIGHT_SHOULDER].set(tempJoint);
+			jointConfidence[LEFT_ELBOW] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_ELBOW,tempJoint);
+			jointDelta[LEFT_ELBOW] = (PVector.sub(joint[LEFT_ELBOW],tempJoint)).mag();
+			joint[LEFT_ELBOW].set(tempJoint);
+			jointConfidence[LEFT_HAND] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HAND,tempJoint);
+			jointDelta[LEFT_HAND] = (PVector.sub(joint[LEFT_HAND],tempJoint)).mag();
+			joint[LEFT_HAND].set(tempJoint);
+			jointConfidence[RIGHT_ELBOW] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_ELBOW,tempJoint);
+			jointDelta[RIGHT_ELBOW] = (PVector.sub(joint[RIGHT_ELBOW],tempJoint)).mag();
+			joint[RIGHT_ELBOW].set(tempJoint);
+			jointConfidence[RIGHT_HAND] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HAND,tempJoint);
+			jointDelta[RIGHT_HAND] = (PVector.sub(joint[RIGHT_HAND],tempJoint)).mag();
+			joint[RIGHT_HAND].set(tempJoint);
+			
+		}
+		
 		jointConfidence[TORSO] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_TORSO,tempJoint);
 		jointDelta[TORSO] = (PVector.sub(joint[TORSO],tempJoint)).mag();
 		joint[TORSO].set(tempJoint);
-		jointConfidence[LEFT_ELBOW] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_ELBOW,tempJoint);
-		jointDelta[LEFT_ELBOW] = (PVector.sub(joint[LEFT_ELBOW],tempJoint)).mag();
-		joint[LEFT_ELBOW].set(tempJoint);
-		jointConfidence[LEFT_HAND] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HAND,tempJoint);
-		jointDelta[LEFT_HAND] = (PVector.sub(joint[LEFT_HAND],tempJoint)).mag();
-		joint[LEFT_HAND].set(tempJoint);
-		jointConfidence[RIGHT_ELBOW] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_ELBOW,tempJoint);
-		jointDelta[RIGHT_ELBOW] = (PVector.sub(joint[RIGHT_ELBOW],tempJoint)).mag();
-		joint[RIGHT_ELBOW].set(tempJoint);
-		jointConfidence[RIGHT_HAND] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HAND,tempJoint);
-		jointDelta[RIGHT_HAND] = (PVector.sub(joint[RIGHT_HAND],tempJoint)).mag();
-		joint[RIGHT_HAND].set(tempJoint);
+		
+		
 		if (fullBodyTracking) {
-			jointConfidence[LEFT_HIP] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HIP,tempJoint);
-			jointDelta[LEFT_HIP] = (PVector.sub(joint[LEFT_HIP],tempJoint)).mag();
-			joint[LEFT_HIP].set(tempJoint);
-			jointConfidence[LEFT_KNEE] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_KNEE,tempJoint);
-			jointDelta[LEFT_KNEE] = (PVector.sub(joint[LEFT_KNEE],tempJoint)).mag();
-			joint[LEFT_KNEE].set(tempJoint);
-			jointConfidence[LEFT_FOOT] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_FOOT,tempJoint);
-			jointDelta[LEFT_FOOT] = (PVector.sub(joint[LEFT_FOOT],tempJoint)).mag();
-			joint[LEFT_FOOT].set(tempJoint);
-			jointConfidence[RIGHT_HIP] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HIP,tempJoint);
-			jointDelta[RIGHT_HIP] = (PVector.sub(joint[RIGHT_HIP],tempJoint)).mag();
-			joint[RIGHT_HIP].set(tempJoint);
-			jointConfidence[RIGHT_KNEE] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_KNEE,tempJoint);
-			jointDelta[RIGHT_KNEE] = (PVector.sub(joint[RIGHT_KNEE],tempJoint)).mag();
-			joint[RIGHT_KNEE].set(tempJoint);
-			jointConfidence[RIGHT_FOOT] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_FOOT,tempJoint);
-			jointDelta[RIGHT_FOOT] = (PVector.sub(joint[RIGHT_FOOT],tempJoint)).mag();
-			joint[RIGHT_FOOT].set(tempJoint);
+			if (setAnatomicallyCorrectLabels) {
+				jointConfidence[LEFT_HIP] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HIP,tempJoint);
+				jointDelta[LEFT_HIP] = (PVector.sub(joint[LEFT_HIP],tempJoint)).mag();
+				joint[LEFT_HIP].set(tempJoint);
+				jointConfidence[LEFT_KNEE] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_KNEE,tempJoint);
+				jointDelta[LEFT_KNEE] = (PVector.sub(joint[LEFT_KNEE],tempJoint)).mag();
+				joint[LEFT_KNEE].set(tempJoint);
+				jointConfidence[LEFT_FOOT] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_FOOT,tempJoint);
+				jointDelta[LEFT_FOOT] = (PVector.sub(joint[LEFT_FOOT],tempJoint)).mag();
+				joint[LEFT_FOOT].set(tempJoint);
+				jointConfidence[RIGHT_HIP] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HIP,tempJoint);
+				jointDelta[RIGHT_HIP] = (PVector.sub(joint[RIGHT_HIP],tempJoint)).mag();
+				joint[RIGHT_HIP].set(tempJoint);
+				jointConfidence[RIGHT_KNEE] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_KNEE,tempJoint);
+				jointDelta[RIGHT_KNEE] = (PVector.sub(joint[RIGHT_KNEE],tempJoint)).mag();
+				joint[RIGHT_KNEE].set(tempJoint);
+				jointConfidence[RIGHT_FOOT] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_FOOT,tempJoint);
+				jointDelta[RIGHT_FOOT] = (PVector.sub(joint[RIGHT_FOOT],tempJoint)).mag();
+				joint[RIGHT_FOOT].set(tempJoint);
+			} else {
+				jointConfidence[LEFT_HIP] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_HIP,tempJoint);
+				jointDelta[LEFT_HIP] = (PVector.sub(joint[LEFT_HIP],tempJoint)).mag();
+				joint[LEFT_HIP].set(tempJoint);
+				jointConfidence[LEFT_KNEE] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_KNEE,tempJoint);
+				jointDelta[LEFT_KNEE] = (PVector.sub(joint[LEFT_KNEE],tempJoint)).mag();
+				joint[LEFT_KNEE].set(tempJoint);
+				jointConfidence[LEFT_FOOT] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_LEFT_FOOT,tempJoint);
+				jointDelta[LEFT_FOOT] = (PVector.sub(joint[LEFT_FOOT],tempJoint)).mag();
+				joint[LEFT_FOOT].set(tempJoint);
+				jointConfidence[RIGHT_HIP] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_HIP,tempJoint);
+				jointDelta[RIGHT_HIP] = (PVector.sub(joint[RIGHT_HIP],tempJoint)).mag();
+				joint[RIGHT_HIP].set(tempJoint);
+				jointConfidence[RIGHT_KNEE] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_KNEE,tempJoint);
+				jointDelta[RIGHT_KNEE] = (PVector.sub(joint[RIGHT_KNEE],tempJoint)).mag();
+				joint[RIGHT_KNEE].set(tempJoint);
+				jointConfidence[RIGHT_FOOT] = kinect.getJointPositionSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_FOOT,tempJoint);
+				jointDelta[RIGHT_FOOT] = (PVector.sub(joint[RIGHT_FOOT],tempJoint)).mag();
+				joint[RIGHT_FOOT].set(tempJoint);
+			}
 		}
 		lUpperArm = PVector.sub(joint[LEFT_ELBOW],joint[LEFT_SHOULDER]);
 		rUpperArm = PVector.sub(joint[RIGHT_ELBOW],joint[RIGHT_SHOULDER]);
