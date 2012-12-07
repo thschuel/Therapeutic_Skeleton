@@ -234,6 +234,11 @@ public class Skeleton {
 	public void setEvaluateStatistics (boolean _evaluateStatistics) {
 		evaluateStatistics = _evaluateStatistics;
 	}
+	/** Getter for evaluating statistics for the skeleton.
+	 *  @return boolean of evaluateStatistics switch */
+	public boolean getEvaluateStatistics () {
+		return evaluateStatistics;
+	}
 	/** Getter for status of the skeleton. Is used as a lock, methods of skeleton will return unsafe values, as long update function is not done.
 	 *  @return true if the status of the skeleton is fully updated */
 	public boolean isUpdated() {
