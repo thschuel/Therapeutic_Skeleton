@@ -229,6 +229,11 @@ public class Skeleton {
 	public boolean getCalculateLocalCoordSys () {
 		return calculateLocalCoordSys;
 	}
+	/** Setter for evaluating statistics for the skeleton. If switched on, statistics will be updated
+	 *  @param _evaluateStatistics switch to set evaluating statistics on/off */
+	public void setEvaluateStatistics (boolean _evaluateStatistics) {
+		evaluateStatistics = _evaluateStatistics;
+	}
 	/** Getter for status of the skeleton. Is used as a lock, methods of skeleton will return unsafe values, as long update function is not done.
 	 *  @return true if the status of the skeleton is fully updated */
 	public boolean isUpdated() {
@@ -288,9 +293,16 @@ public class Skeleton {
 	// -----------------------------------------------------------------
 	// GETTERS FOR STATISTICS OF SKELETON
 	/** Getter for SkeletonStatistics. The whole class object is returned to be displayed in the main applet.
+	 *  This getter provides access to the updated statistics object.
 	 *  @return the skeleton statistics object */
-	public SkeletonStatistics getStatistics () {
+	public SkeletonStatistics getLiveStatistics () {
 		return statistics;
+	}
+	/** Getter for SkeletonStatistics. The whole class object is returned to be displayed in the main applet.
+	 *  This getter returns a copy of the statistics object that is not linked to a skeleton object and won't be further updated.
+	 *  @return a copy of the skeleton statistics object */
+	public SkeletonStatistics getFinalStatistics () {
+		return new SkeletonStatistics(statistics);
 	}
 	
 	// -----------------------------------------------------------------

@@ -4,10 +4,15 @@ import java.util.ArrayList;
 import processing.core.*;
 
 public class SkeletonStatistics {
-	private ArrayList<PVector> historyLeftHand = new ArrayList<PVector>();
-	private ArrayList<PVector> historyLeftElbow = new ArrayList<PVector>();
-	private ArrayList<PVector> historyRightHand = new ArrayList<PVector>();
-	private ArrayList<PVector> historyRightElbow = new ArrayList<PVector>();
+	private ArrayList<PVector> historyLeftHandLCS = new ArrayList<PVector>();
+	private ArrayList<PVector> historyLeftElbowLCS = new ArrayList<PVector>();
+	private ArrayList<PVector> historyRightHandLCS = new ArrayList<PVector>();
+	private ArrayList<PVector> historyRightElbowLCS = new ArrayList<PVector>();
+	
+	private PVector lastSkeletonPosition = new PVector();
+	private PVector lastTorsoLCS = new PVector();
+	private PVector lastLeftShoulderLCS = new PVector();
+	private PVector lastRightShoulderLCS = new PVector();
 	
 	private float distanceLeftHand = 0f;
 	private float distanceLeftElbow = 0f;
@@ -18,31 +23,15 @@ public class SkeletonStatistics {
 	private float distancePerSecondLeftElbow = 0f;
 	private float distancePerSecondRightHand = 0f;
 	private float distancePerSecondRightElbow = 0f;
-
-	private float maxXLeftHand = 0f;
-	private float maxYLeftHand = 0f;
-	private float maxZLeftHand = 0f;
-	private float minXLeftHand = 0f;
-	private float minYLeftHand = 0f;
-	private float minZLeftHand = 0f;
-	private float maxXLeftElbow = 0f;
-	private float maxYLeftElbow = 0f;
-	private float maxZLeftElbow = 0f;
-	private float minXLeftElbow = 0f;
-	private float minYLeftElbow = 0f;
-	private float minZLeftElbow = 0f;
-	private float maxXRightHand = 0f;
-	private float maxYRightHand = 0f;
-	private float maxZRightHand = 0f;
-	private float minXRightHand = 0f;
-	private float minYRightHand = 0f;
-	private float minZRightHand = 0f;
-	private float maxXRightElbow = 0f;
-	private float maxYRightElbow = 0f;
-	private float maxZRightElbow = 0f;
-	private float minXRightElbow = 0f;
-	private float minYRightElbow = 0f;
-	private float minZRightElbow = 0f;
+	
+	private float maxAngleLeftLowerArm = 0f;
+	private float maxAngleLeftUpperArm = 0f;
+	private float maxAngleRightLowerArm = 0f;
+	private float maxAngleRightUpperArm = 0f;
+	private int maxAngleLeftLowerArmIndex = 0;
+	private int maxAngleLeftUpperArmIndex = 0;
+	private int maxAngleRightLowerArmIndex = 0;
+	private int maxAngleRightUpperArmIndex = 0;
 	
 	private Skeleton skeleton = null;
 	
@@ -50,83 +39,107 @@ public class SkeletonStatistics {
 		skeleton = _skeleton;
 	}
 	
+	/** Constructor that provides a deep copy of SkeletonStatistics. Only the linked Skeleton is not copied. 
+	 *  Can be used to get access to a not anymore updated copy at a given time of statistics. */
+	public SkeletonStatistics (SkeletonStatistics _statistics) {
+		historyLeftHandLCS.addAll(_statistics.getHistoryLeftHandLCS());
+		historyLeftElbowLCS.addAll(_statistics.getHistoryLeftElbowLCS());
+		historyRightHandLCS.addAll(_statistics.getHistoryRightHandLCS());
+		historyRightElbowLCS.addAll(_statistics.getHistoryRightElbowLCS());
+		
+		lastSkeletonPosition.set(_statistics.getLastSkeletonPosition());
+		lastTorsoLCS.set(_statistics.getLastTorsoLCS());
+		lastLeftShoulderLCS.set(_statistics.getLastLeftShoulderLCS());
+		lastRightShoulderLCS.set(_statistics.getLastRightShoulderLCS());
+		
+		distanceLeftHand = _statistics.getDistanceLeftHand();
+		distanceLeftElbow = _statistics.getDistanceLeftElbow();
+		distanceRightHand = _statistics.getDistanceRightHand();
+		distanceRightElbow = _statistics.getDistanceRightElbow();
+		
+		distancePerSecondLeftHand = _statistics.getDistancePerSecondLeftHand();
+		distancePerSecondLeftElbow = _statistics.getDistancePerSecondLeftElbow();
+		distancePerSecondRightHand = _statistics.getDistancePerSecondRightHand();
+		distancePerSecondRightElbow = _statistics.getDistancePerSecondRightElbow();
+		
+		maxAngleLeftLowerArm = _statistics.getMaxAngleLeftLowerArm();
+		maxAngleLeftUpperArm = _statistics.getMaxAngleLeftUpperArm();
+		maxAngleRightLowerArm = _statistics.getMaxAngleRightLowerArm();
+		maxAngleRightUpperArm = _statistics.getMaxAngleRightUpperArm();
+		maxAngleLeftLowerArmIndex = _statistics.getMaxAngleLeftLowerArmIndex();
+		maxAngleLeftUpperArmIndex = _statistics.getMaxAngleLeftUpperArmIndex();
+		maxAngleRightLowerArmIndex = _statistics.getMaxAngleRightLowerArmIndex();
+		maxAngleRightUpperArmIndex = _statistics.getMaxAngleRightUpperArmIndex();
+	}
+	
 	public void update () {
-		PVector tempLeftHand = new PVector();
-		tempLeftHand.set(skeleton.getJoint(Skeleton.LEFT_HAND));
-		PVector tempLeftElbow = new PVector();
-		tempLeftElbow.set(skeleton.getJoint(Skeleton.LEFT_ELBOW));
-		PVector tempRightHand = new PVector();
-		tempRightHand.set(skeleton.getJoint(Skeleton.RIGHT_HAND));
-		PVector tempRightElbow = new PVector();
-		tempRightElbow.set(skeleton.getJoint(Skeleton.RIGHT_ELBOW));
-		
-		if (historyLeftHand.size() > 0) {
-			PVector prevLeftHand = historyLeftHand.get(historyLeftHand.size()-1);
-			PVector prevLeftElbow = historyLeftElbow.get(historyLeftElbow.size()-1);
-			PVector prevRightHand = historyRightHand.get(historyRightHand.size()-1);
-			PVector prevRightElbow = historyRightElbow.get(historyRightElbow.size()-1);
-			float currentDistanceLeftHand = (PVector.sub(tempLeftHand,prevLeftHand)).mag();
-			float currentDistanceLeftElbow = (PVector.sub(tempLeftElbow,prevLeftElbow)).mag();
-			float currentDistanceRightHand = (PVector.sub(tempRightHand,prevRightHand)).mag();
-			float currentDistanceRightElbow = (PVector.sub(tempRightElbow,prevRightElbow)).mag();
-			distanceLeftHand += currentDistanceLeftHand;
-			distanceLeftElbow += currentDistanceLeftElbow;
-			distanceRightHand += currentDistanceRightHand;
-			distanceRightElbow += currentDistanceRightElbow;
-			distancePerSecondLeftHand = currentDistanceLeftHand/skeleton.getFrameRate();
-			distancePerSecondLeftElbow = currentDistanceLeftElbow/skeleton.getFrameRate();
-			distancePerSecondRightHand = currentDistanceRightHand/skeleton.getFrameRate();
-			distancePerSecondRightElbow = currentDistanceRightElbow/skeleton.getFrameRate();
+		if (skeleton != null) {
+			// copy joint information to new pvector to store in history
+			PVector tempLeftHand = new PVector();
+			tempLeftHand.set(skeleton.getJointLCS(Skeleton.LEFT_HAND));
+			PVector tempLeftElbow = new PVector();
+			tempLeftElbow.set(skeleton.getJointLCS(Skeleton.LEFT_ELBOW));
+			PVector tempRightHand = new PVector();
+			tempRightHand.set(skeleton.getJointLCS(Skeleton.RIGHT_HAND));
+			PVector tempRightElbow = new PVector();
+			tempRightElbow.set(skeleton.getJointLCS(Skeleton.RIGHT_ELBOW));
+			
+			distanceLeftHand += skeleton.getJointDelta(Skeleton.LEFT_HAND);
+			distanceLeftElbow += skeleton.getJointDelta(Skeleton.LEFT_ELBOW);
+			distanceRightHand += skeleton.getJointDelta(Skeleton.RIGHT_HAND);
+			distanceRightElbow += skeleton.getJointDelta(Skeleton.RIGHT_ELBOW);
+			distancePerSecondLeftHand = skeleton.getJointDelta(Skeleton.LEFT_HAND)*skeleton.getFrameRate();
+			distancePerSecondLeftElbow = skeleton.getJointDelta(Skeleton.LEFT_ELBOW)*skeleton.getFrameRate();
+			distancePerSecondRightHand = skeleton.getJointDelta(Skeleton.RIGHT_HAND)*skeleton.getFrameRate();
+			distancePerSecondRightElbow = skeleton.getJointDelta(Skeleton.RIGHT_ELBOW)*skeleton.getFrameRate();
+	
+			float tempAngleLeftLowerArm = skeleton.getAngleLeftLowerArm();
+			float tempAngleLeftUpperArm = skeleton.getAngleLeftUpperArm();
+			float tempAngleRightLowerArm = skeleton.getAngleRightLowerArm();
+			float tempAngleRightUpperArm = skeleton.getAngleRightUpperArm();
+			if (tempAngleLeftLowerArm > maxAngleLeftLowerArm) {
+				maxAngleLeftLowerArm = tempAngleLeftLowerArm;
+				maxAngleLeftLowerArmIndex = historyLeftHandLCS.size();
+			}
+			if (PConstants.PI-tempAngleLeftUpperArm > maxAngleLeftUpperArm) {
+				maxAngleLeftUpperArm = PConstants.PI-tempAngleLeftUpperArm;
+				maxAngleLeftUpperArmIndex = historyLeftElbowLCS.size();
+			}
+			if (tempAngleRightLowerArm > maxAngleRightLowerArm) {
+				maxAngleRightLowerArm = tempAngleRightLowerArm;
+				maxAngleRightLowerArmIndex = historyRightHandLCS.size();
+			}
+			if (PConstants.PI-tempAngleRightUpperArm > maxAngleRightUpperArm) {
+				maxAngleRightUpperArm = PConstants.PI-tempAngleRightUpperArm;
+				maxAngleRightUpperArmIndex = historyRightElbowLCS.size();
+			}
+			
+			historyLeftHandLCS.add(tempLeftHand);
+			historyLeftElbowLCS.add(tempLeftElbow);
+			historyRightHandLCS.add(tempRightHand);
+			historyRightElbowLCS.add(tempRightElbow);
+			
+			lastSkeletonPosition.set(skeleton.getOrigin());
+			lastTorsoLCS.set(skeleton.getJointLCS(Skeleton.TORSO));
+			lastLeftShoulderLCS.set(skeleton.getJointLCS(Skeleton.LEFT_SHOULDER));
+			lastRightShoulderLCS.set(skeleton.getJointLCS(Skeleton.RIGHT_SHOULDER));
 		}
-
-		if (tempLeftHand.x > maxXLeftHand) maxXLeftHand = tempLeftHand.x;
-		if (tempLeftHand.y > maxYLeftHand) maxYLeftHand = tempLeftHand.y;
-		if (tempLeftHand.z > maxZLeftHand) maxZLeftHand = tempLeftHand.z;
-		if (tempLeftHand.x < minXLeftHand) minXLeftHand = tempLeftHand.x;
-		if (tempLeftHand.y < minYLeftHand) minYLeftHand = tempLeftHand.y;
-		if (tempLeftHand.z < minZLeftHand) minZLeftHand = tempLeftHand.z;
-		
-		if (tempLeftElbow.x > maxXLeftElbow) maxXLeftElbow = tempLeftElbow.x;
-		if (tempLeftElbow.y > maxYLeftElbow) maxYLeftElbow = tempLeftElbow.y;
-		if (tempLeftElbow.z > maxZLeftElbow) maxZLeftElbow = tempLeftElbow.z;
-		if (tempLeftElbow.x < minXLeftElbow) minXLeftElbow = tempLeftElbow.x;
-		if (tempLeftElbow.y < minYLeftElbow) minYLeftElbow = tempLeftElbow.y;
-		if (tempLeftElbow.z < minZLeftElbow) minZLeftElbow = tempLeftElbow.z;
-
-		if (tempRightHand.x > maxXRightHand) maxXRightHand = tempRightHand.x;
-		if (tempRightHand.y > maxYRightHand) maxYRightHand = tempRightHand.y;
-		if (tempRightHand.z > maxZRightHand) maxZRightHand = tempRightHand.z;
-		if (tempRightHand.x < minXRightHand) minXRightHand = tempRightHand.x;
-		if (tempRightHand.y < minYRightHand) minYRightHand = tempRightHand.y;
-		if (tempRightHand.z < minZRightHand) minZRightHand = tempRightHand.z;
-
-		if (tempRightElbow.x > maxXRightElbow) maxXRightElbow = tempRightElbow.x;
-		if (tempRightElbow.y > maxYRightElbow) maxYRightElbow = tempRightElbow.y;
-		if (tempRightElbow.z > maxZRightElbow) maxZRightElbow = tempRightElbow.z;
-		if (tempRightElbow.x < minXRightElbow) minXRightElbow = tempRightElbow.x;
-		if (tempRightElbow.y < minYRightElbow) minYRightElbow = tempRightElbow.y;
-		if (tempRightElbow.z < minZRightElbow) minZRightElbow = tempRightElbow.z;
-		
-		historyLeftHand.add(tempLeftHand);
-		historyLeftElbow.add(tempLeftElbow);
-		historyRightHand.add(tempRightHand);
-		historyRightElbow.add(tempRightElbow);
 	}
 
-	public ArrayList<PVector> getHistoryLeftHand() {
-		return historyLeftHand;
+	public ArrayList<PVector> getHistoryLeftHandLCS() {
+		return historyLeftHandLCS;
 	}
 
-	public ArrayList<PVector> getHistoryLeftElbow() {
-		return historyLeftElbow;
+	public ArrayList<PVector> getHistoryLeftElbowLCS() {
+		return historyLeftElbowLCS;
 	}
 
-	public ArrayList<PVector> getHistoryRightHand() {
-		return historyRightHand;
+	public ArrayList<PVector> getHistoryRightHandLCS() {
+		return historyRightHandLCS;
 	}
 
-	public ArrayList<PVector> getHistoryRightElbow() {
-		return historyRightElbow;
+	public ArrayList<PVector> getHistoryRightElbowLCS() {
+		return historyRightElbowLCS;
 	}
 
 	public float getDistanceLeftHand() {
@@ -161,100 +174,72 @@ public class SkeletonStatistics {
 		return distancePerSecondRightElbow;
 	}
 
-	public float getMaxXLeftHand() {
-		return maxXLeftHand;
+	public float getMaxAngleLeftLowerArm() {
+		return maxAngleLeftLowerArm;
 	}
 
-	public float getMaxYLeftHand() {
-		return maxYLeftHand;
+	public float getMaxAngleLeftUpperArm() {
+		return maxAngleLeftUpperArm;
 	}
 
-	public float getMaxZLeftHand() {
-		return maxZLeftHand;
+	public float getMaxAngleRightLowerArm() {
+		return maxAngleRightLowerArm;
 	}
 
-	public float getMinXLeftHand() {
-		return minXLeftHand;
+	public float getMaxAngleRightUpperArm() {
+		return maxAngleRightUpperArm;
 	}
 
-	public float getMinYLeftHand() {
-		return minYLeftHand;
+	public Skeleton getSkeleton() {
+		return skeleton;
 	}
 
-	public float getMinZLeftHand() {
-		return minZLeftHand;
+	public PVector getLastSkeletonPosition() {
+		return lastSkeletonPosition;
 	}
 
-	public float getMaxXLeftElbow() {
-		return maxXLeftElbow;
+	public PVector getLastTorsoLCS() {
+		return lastTorsoLCS;
 	}
 
-	public float getMaxYLeftElbow() {
-		return maxYLeftElbow;
+	public PVector getLastLeftShoulderLCS() {
+		return lastLeftShoulderLCS;
 	}
 
-	public float getMaxZLeftElbow() {
-		return maxZLeftElbow;
+	public PVector getLastRightShoulderLCS() {
+		return lastRightShoulderLCS;
 	}
 
-	public float getMinXLeftElbow() {
-		return minXLeftElbow;
+	public int getMaxAngleLeftLowerArmIndex() {
+		return maxAngleLeftLowerArmIndex;
 	}
 
-	public float getMinYLeftElbow() {
-		return minYLeftElbow;
+	public int getMaxAngleLeftUpperArmIndex() {
+		return maxAngleLeftUpperArmIndex;
 	}
 
-	public float getMinZLeftElbow() {
-		return minZLeftElbow;
+	public int getMaxAngleRightLowerArmIndex() {
+		return maxAngleRightLowerArmIndex;
 	}
 
-	public float getMaxXRightHand() {
-		return maxXRightHand;
+	public int getMaxAngleRightUpperArmIndex() {
+		return maxAngleRightUpperArmIndex;
 	}
 
-	public float getMaxYRightHand() {
-		return maxYRightHand;
+	public PVector getLeftHandAtMaxAngle() {
+		return historyLeftHandLCS.get(maxAngleLeftLowerArmIndex);
 	}
 
-	public float getMaxZRightHand() {
-		return maxZRightHand;
+	public PVector getLeftElbowAtMaxAngle() {
+		return historyLeftElbowLCS.get(maxAngleLeftUpperArmIndex);
 	}
 
-	public float getMinXRightHand() {
-		return minXRightHand;
+	public PVector getRightHandAtMaxAngle() {
+		return historyRightHandLCS.get(maxAngleRightLowerArmIndex);
 	}
 
-	public float getMinYRightHand() {
-		return minYRightHand;
-	}
-
-	public float getMinZRightHand() {
-		return minZRightHand;
-	}
-
-	public float getMaxXRightElbow() {
-		return maxXRightElbow;
-	}
-
-	public float getMaxYRightElbow() {
-		return maxYRightElbow;
-	}
-
-	public float getMaxZRightElbow() {
-		return maxZRightElbow;
-	}
-
-	public float getMinXRightElbow() {
-		return minXRightElbow;
-	}
-
-	public float getMinYRightElbow() {
-		return minYRightElbow;
-	}
-
-	public float getMinZRightElbow() {
-		return minZRightElbow;
+	public PVector getRightElbowAtMaxAngle() {
+		return historyRightElbowLCS.get(maxAngleRightUpperArmIndex);
 	}
 	
 }

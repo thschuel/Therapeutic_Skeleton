@@ -166,7 +166,7 @@ public class SkeletonPosture {
 		float angleToBodyY = PVector.angleBetween(skeleton.getLeftUpperArmLCS(),skeleton.getOrientationY());
 		if (SkeletonMath.isValueBetween(angleLArm,0,PApplet.radians(10)+postureAngleTolerance) && SkeletonMath.isValueBetween(angleRArm,0,PApplet.radians(10)+postureAngleTolerance)) { // arms form a straight line
 			if (SkeletonMath.isValueBetween(angleIShape,0,PApplet.radians(15)+postureAngleTolerance)) { // arms are parallel
-				if (SkeletonMath.isValueBetween(angleToBodyY,0,PApplet.radians(15)+postureAngleTolerance)) { // arms are parallel to y body axis
+				if (SkeletonMath.isValueBetween(angleToBodyY,0,PApplet.radians(15)+postureAngleTolerance) || SkeletonMath.isValueBetween(angleToBodyY,PApplet.radians(165)-postureAngleTolerance,PApplet.radians(180))) { // arms are parallel to y body axis
 					return true;
 				}
 			}
