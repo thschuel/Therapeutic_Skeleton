@@ -13,11 +13,11 @@ public class SkeletonMath {
 	private PMatrix3D transformCoordSys;
 	private PMatrix3D transformCoordSysInv;
 
-	// calculation of mirror plane
-	private PVector	rMP = new PVector(); // MirrorPlane in HNF: r*n0-d=0
-	private PVector	n0MP = new PVector();
-	private float dMP = 0.0f;
-	
+	// body planes in Hesse Normal Form, HNF: r*n0-d=0
+	private BodyPlaneHNF sagittal = new BodyPlaneHNF(); // sagittal plane is mirror plane
+	private BodyPlaneHNF frontal = new BodyPlaneHNF();
+	private BodyPlaneHNF transversal = new BodyPlaneHNF();
+
 	public SkeletonMath (Skeleton _skeleton) {
 		skeleton = _skeleton;
 	}
@@ -35,14 +35,14 @@ public class SkeletonMath {
 	public PVector getOrientationZ() {
 		return orientationZ;
 	}
-	public PVector getRMP() {
-		return rMP;
+	public BodyPlaneHNF getSagittalPlane() {
+		return sagittal;
 	}
-	public PVector getN0MP() {
-		return n0MP;
+	public BodyPlaneHNF getFrontalPlane() {
+		return frontal;
 	}
-	public float getDMP() {
-		return dMP;
+	public BodyPlaneHNF getTransversalPlane() {
+		return transversal;
 	}
 	
 	// evaluate local coord sys
@@ -91,31 +91,37 @@ public class SkeletonMath {
 	}
 	
 	// MIRROR THERAPY CAPABILITY
-	// calculate mirror plane
-	public void calculateMirrorPlane () {
-		// calculate body plane of Shoulder and Torso points in HNF
+	// calculate body planes in HNF, Sagittal body plane is mirror plane
+	public void calculateBodyPlanes () {
+		// calculate frontal body plane defined by Shoulder and Torso points in HNF
 		// HNF: r*n0-d = 0
-		PVector r;
-		PVector n0;
 		// r is position vector of any point in the plane
-		r = skeleton.getJoint(Skeleton.TORSO);
+		frontal.r = skeleton.getJoint(Skeleton.TORSO);
 		// n0 is cross product of two vectors in the plane
-		PVector temp1 = PVector.sub(skeleton.getJoint(Skeleton.LEFT_SHOULDER),r);
-		PVector temp2 = PVector.sub(skeleton.getJoint(Skeleton.RIGHT_SHOULDER),r);
-		n0 = temp1.cross(temp2);
-		n0.normalize();
-		// mirrorPlane is orthogonal to body plane and contains the line between torso and neck
+		PVector temp1 = PVector.sub(skeleton.getJoint(Skeleton.LEFT_SHOULDER),frontal.r);
+		PVector temp2 = PVector.sub(skeleton.getJoint(Skeleton.RIGHT_SHOULDER),frontal.r);
+		frontal.n0 = temp1.cross(temp2);
+		frontal.n0.normalize();
+		frontal.d = PVector.dot(frontal.r,frontal.n0);
+		
+		// sagittal plane is orthogonal to frontal plane and contains the line between torso and neck
 		// calculate mirrorPlane in HNF: r*n0-d = 0
-		rMP = r; // r is always set to position of the torso
-		n0MP = n0.cross(PVector.sub(skeleton.getJoint(Skeleton.NECK),skeleton.getJoint(Skeleton.TORSO)));
-		n0MP.normalize();
-		dMP = PVector.dot(rMP,n0MP);
+		sagittal.r = skeleton.getJoint(Skeleton.TORSO); // r is always set to position of the torso
+		sagittal.n0 = frontal.n0.cross(PVector.sub(skeleton.getJoint(Skeleton.NECK),skeleton.getJoint(Skeleton.TORSO)));
+		sagittal.n0.normalize();
+		sagittal.d = PVector.dot(sagittal.r,sagittal.n0);
+		
+		// transversal plane is orthogonal to sagittal and frontal plane and contains the torso point
+		transversal.r = skeleton.getJoint(Skeleton.TORSO);
+		transversal.n0 = frontal.n0.cross(sagittal.n0);
+		transversal.n0.normalize();
+		transversal.d = PVector.dot(transversal.r,transversal.n0);
 	}
 	
 	// mirror joint
 	public PVector mirrorJointVector (PVector mirrorJoint) {
-		float distanceToMP = PVector.dot(mirrorJoint,n0MP) - dMP;
-		return PVector.add(mirrorJoint,PVector.mult(n0MP,-2*distanceToMP));
+		float distanceToMP = PVector.dot(mirrorJoint,sagittal.n0) - sagittal.d;
+		return PVector.add(mirrorJoint,PVector.mult(sagittal.n0,-2*distanceToMP));
 	}
 	
 	// mirror joint orientation
@@ -123,22 +129,29 @@ public class SkeletonMath {
 		PVector x = new PVector(mirrorMatrix.m00,mirrorMatrix.m10,mirrorMatrix.m20);
 		PVector y = new PVector(mirrorMatrix.m01,mirrorMatrix.m11,mirrorMatrix.m21);
 		PVector z = new PVector(mirrorMatrix.m02,mirrorMatrix.m12,mirrorMatrix.m22);
-		x.add(rMP);
-		y.add(rMP);
-		z.add(rMP);
-		float distanceToMP = PVector.dot(x,n0MP) - dMP;
-		x.set(PVector.add(x,PVector.mult(n0MP,-2*distanceToMP)));
-		distanceToMP = PVector.dot(y,n0MP) - dMP;
-		y.set(PVector.add(y,PVector.mult(n0MP,-2*distanceToMP)));
-		distanceToMP = PVector.dot(z,n0MP) - dMP;
-		z.set(PVector.add(z,PVector.mult(n0MP,-2*distanceToMP)));
-		x.sub(rMP);
-		y.sub(rMP);
-		z.sub(rMP);
+		x.add(sagittal.r);
+		y.add(sagittal.r);
+		z.add(sagittal.r);
+		float distanceToMP = PVector.dot(x,sagittal.n0) - sagittal.d;
+		x.set(PVector.add(x,PVector.mult(sagittal.n0,-2*distanceToMP)));
+		distanceToMP = PVector.dot(y,sagittal.n0) - sagittal.d;
+		y.set(PVector.add(y,PVector.mult(sagittal.n0,-2*distanceToMP)));
+		distanceToMP = PVector.dot(z,sagittal.n0) - sagittal.d;
+		z.set(PVector.add(z,PVector.mult(sagittal.n0,-2*distanceToMP)));
+		x.sub(sagittal.r);
+		y.sub(sagittal.r);
+		z.sub(sagittal.r);
 		return new PMatrix3D(-x.x,y.x,z.x,mirrorMatrix.m03,-x.y,y.y,z.y,mirrorMatrix.m13,-x.z,y.z,z.z,mirrorMatrix.m23,mirrorMatrix.m30,mirrorMatrix.m31,mirrorMatrix.m32,mirrorMatrix.m33);		
 	}
 	
 	public static boolean isValueBetween (float val, float lowerBound, float upperBound) {
 			return (val >= lowerBound && val <= upperBound);
 	}
+}
+
+class BodyPlaneHNF {
+	// HNF: r*n0-d=0
+	public PVector r = new PVector();
+	public PVector n0 = new PVector();
+	public float d = 0.0f;
 }

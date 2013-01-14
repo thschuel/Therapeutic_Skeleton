@@ -87,7 +87,6 @@ public class Skeleton {
 	private PVector rLowerArmLCS = new PVector();
 	
 	// setup variables
-	private boolean calculateLocalCoordSys = true;
 	private boolean fullBodyTracking = true;
 	private short mirrorTherapy = MIRROR_THERAPY_OFF;
 	private boolean evaluatePostureAndGesture = true;
@@ -106,8 +105,6 @@ public class Skeleton {
 	private SkeletonPosture posture = null;
 	private boolean postureEvaluated = false;
 	private SkeletonMath math = null;
-	private boolean mirrorPlaneCalculated = false;
-	private boolean localCoordSysCalculated = false;
 	private SkeletonStatistics statistics = null;
 	
 	// -----------------------------------------------------------------
@@ -119,11 +116,10 @@ public class Skeleton {
 	 *  @param _calculateLocalCoordSys switches calculation of the local coordinate system on/off. If switched on, local coordination system will be calculated and joints will be transformed to it 
 	 *  @param _evaluatePostureAndGesture switches calculation of the posture and gesture on/off. Switching it on requires local coord sys to be calculated 
 	 *  @param _mirrorTherapy Sets the skeleton to mirror one body side to the other. When mirrorTherapy is set on, mirrorPlane will be calculated. Short value should correspond to skeleton constants. If out of range, mirror therapy will be switched off */
-	public Skeleton (SimpleOpenNI _kinect, int _userId, boolean _fullBodyTracking, boolean _calculateLocalCoordSys, boolean _evaluatePostureAndGesture, short _mirrorTherapy, boolean _evaluateStatistics) {
+	public Skeleton (SimpleOpenNI _kinect, int _userId, boolean _fullBodyTracking, boolean _evaluatePostureAndGesture, short _mirrorTherapy, boolean _evaluateStatistics) {
 		kinect = _kinect;
 		userId = _userId;
 		fullBodyTracking = _fullBodyTracking;
-		calculateLocalCoordSys = _calculateLocalCoordSys;
 		evaluatePostureAndGesture = _evaluatePostureAndGesture;
 		evaluateStatistics = _evaluateStatistics;
 		if (_mirrorTherapy >= MIRROR_THERAPY_OFF && _mirrorTherapy <= MIRROR_THERAPY_RIGHT) 
@@ -157,34 +153,29 @@ public class Skeleton {
 	 *  @param _frameRate the current frame rate of PApplet, used for statistics */
 	public void update (int _frameCount, float _frameRate) {
 		isUpdated = false;
-		localCoordSysCalculated = false;
-		mirrorPlaneCalculated = false;
 		gestureEvaluated = false;
 		postureEvaluated = false;
 		frameCount = _frameCount;
 		frameRate = _frameRate;
 		
+		// Update all internal information
 		updateJointPositions();
 		updateJointOrientations();
+
+		math.calculateBodyPlanes();
+		math.calculateLocalCoordSys();
+		transformToLCS();
 		
 		if (mirrorTherapy != MIRROR_THERAPY_OFF) {
-			math.calculateMirrorPlane();
-			mirrorPlaneCalculated = true;
 			updateMirroredJointPositions();
 			updateMirroredJointOrientations();
 		}
-		if (calculateLocalCoordSys) {
-			math.calculateLocalCoordSys();
-			localCoordSysCalculated = true;
-			transformToLCS();
-			if (evaluatePostureAndGesture) {
-				posture.evaluate();
-				postureEvaluated = true;
-				gesture.evaluate(updateCycle);
-				gestureEvaluated = true;
-			}
+		if (evaluatePostureAndGesture) {
+			posture.evaluate();
+			postureEvaluated = true;
+			gesture.evaluate(updateCycle);
+			gestureEvaluated = true;
 		}
-		
 		if (evaluateStatistics) {
 			statistics.update();
 		}
@@ -218,16 +209,6 @@ public class Skeleton {
 	 *  @return true if full body tracking is switched on */
 	public boolean getFullBodyTracking () {
 		return fullBodyTracking;
-	}
-	/** Setter for calculating the local coordinate system. If switched on, joints will be transformed to local coordinate system.
-	 *  @param _calculateLocalCoordSys switch calculating the local coordinate system on/off */
-	public void setCalculateLocalCoordSys (boolean _calculateLocalCoordSys) {
-		calculateLocalCoordSys = _calculateLocalCoordSys;
-	}
-	/** Getter for calculating the local coordinate system.
-	 *  @return true if calculating the local coordinate system is switched on */
-	public boolean getCalculateLocalCoordSys () {
-		return calculateLocalCoordSys;
 	}
 	/** Setter for evaluating statistics for the skeleton. If switched on, statistics will be updated
 	 *  @param _evaluateStatistics switch to set evaluating statistics on/off */
@@ -338,7 +319,7 @@ public class Skeleton {
 	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
 	 *  @return The position of a certain joint in the local coordinate system as vector. If jointType out of range or if localCoordSys was not calculated: 0-vector */
 	public PVector getJointLCS (short jointType) {
-		if (jointType >= 0 && jointType <= 14 && localCoordSysCalculated) 
+		if (jointType >= 0 && jointType <= 14) 
 			return jointLCS[jointType];
 		else
 			return new PVector();
@@ -408,37 +389,25 @@ public class Skeleton {
 	public PVector getRightLowerArm() {
 		return rLowerArm;
 	}
-	/** The vectors for the lower and upper arms are calculated for convenience. The arms in the local coordinate system are calculated only if calculateLocalCoordSys was set.
-	 *  @return The vector for the left upper arm in the local coordinate system. If localCoordSys was not calculated: 0-vector */
+	/** The vectors for the lower and upper arms are calculated for convenience.
+	 *  @return The vector for the left upper arm in the local coordinate system.*/
 	public PVector getLeftUpperArmLCS() {
-		if (localCoordSysCalculated)
-			return lUpperArmLCS;
-		else
-			return new PVector();
+		return lUpperArmLCS;
 	}
-	/** The vectors for the lower and upper arms are calculated for convenience. The arms in the local coordinate system are calculated only if calculateLocalCoordSys was set.
-	 *  @return The vector for the left lower arm in the local coordinate system. If localCoordSys was not calculated: 0-vector */
+	/** The vectors for the lower and upper arms are calculated for convenience. 
+	 *  @return The vector for the left lower arm in the local coordinate system.  */
 	public PVector getRightUpperArmLCS() {
-		if (localCoordSysCalculated)
-			return rUpperArmLCS;
-		else
-			return new PVector();
+		return rUpperArmLCS;
 	}
-	/** The vectors for the lower and upper arms are calculated for convenience. The arms in the local coordinate system are calculated only if calculateLocalCoordSys was set.
-	 *  @return The vector for the right upper arm in the local coordinate system. If localCoordSys was not calculated: 0-vector */
+	/** The vectors for the lower and upper arms are calculated for convenience. 
+	 *  @return The vector for the right upper arm in the local coordinate system.  */
 	public PVector getLeftLowerArmLCS() {
-		if (localCoordSysCalculated)
-			return lLowerArmLCS;
-		else
-			return new PVector();
+		return lLowerArmLCS;
 	}
-	/** The vectors for the lower and upper arms are calculated for convenience. The arms in the local coordinate system are calculated only if calculateLocalCoordSys was set.
-	 *  @return The vector for the right lower arm in the local coordinate system. If localCoordSys was not calculated: 0-vector */
+	/** The vectors for the lower and upper arms are calculated for convenience. 
+	 *  @return The vector for the right lower arm in the local coordinate system.  */
 	public PVector getRightLowerArmLCS() {
-		if (localCoordSysCalculated)
-			return rLowerArmLCS;
-		else
-			return new PVector();
+		return rLowerArmLCS;
 	}
 	
 	
@@ -458,38 +427,26 @@ public class Skeleton {
 	/** returns the angle between the limb-vector and local X axis (shoulder_l-shoulder_r)
 	 *  @param joint11 the joint the limb-vector points to
 	 *  @param joint12 the joint the limb-vector origins in
-	 *  @return the angle, float between 0 and PI. 0f if local coordinate system was not calculated */
+	 *  @return the angle, float between 0 and PI.*/
 	public float angleToLocalXAxis (short joint11, short joint12) {
-		if (localCoordSysCalculated) {
-			PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
-			return PVector.angleBetween(axis1,getOrientationX());
-		} else {
-			return 0f;
-		}
+		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
+		return PVector.angleBetween(axis1,getOrientationX());
 	}
 	/** returns the angle between the limb-vector and local Y axis (neck-torso)
 	 *  @param joint11 the joint the limb-vector points to
 	 *  @param joint12 the joint the limb-vector origins in
-	 *  @return the angle, float between 0 and PI. 0f if local coordinate system was not calculated */
+	 *  @return the angle, float between 0 and PI.*/
 	public float angleToLocalYAxis (short joint11, short joint12) {
-		if (localCoordSysCalculated) {
-			PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
-			return PVector.angleBetween(axis1,getOrientationY()); 
-		} else {
-			return 0f;
-		}
+		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
+		return PVector.angleBetween(axis1,getOrientationY()); 
 	}
 	/** returns the angle between the limb-vector and local Z axis (orthogonal on local x/y-plane)
 	 *  @param joint11 the joint the limb-vector points to
 	 *  @param joint12 the joint the limb-vector origins in
-	 *  @return the angle, float between 0 and PI. 0f if local coordinate system was not calculated */
+	 *  @return the angle, float between 0 and PI. */
 	public float angleToLocalZAxis (short joint11, short joint12) {
-		if (localCoordSysCalculated) {
-			PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
-			return PVector.angleBetween(axis1,getOrientationZ());
-		} else {
-			return 0f;
-		}
+		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
+		return PVector.angleBetween(axis1,getOrientationZ());
 	}
 	/** returns the angle between the limb-vector and the global X axis
 	 *  @param joint11 the joint the limb-vector points to
@@ -516,132 +473,129 @@ public class Skeleton {
 		return PVector.angleBetween(axis1,new PVector(0,0,1));
 	}
 	/** The angle between the left upper Arm and the body axis. Is calculated in the local coordinate system!
-	 *  @return The angle between the left upper Arm and the body axis. 0f if local coordinate system is not calculated*/
+	 *  @return The angle between the left upper Arm and the body axis.*/
 	public float getAngleLeftUpperArm() {
-		if (localCoordSysCalculated)
-			return PVector.angleBetween(lUpperArmLCS,getOrientationY());
-		else
-			return 0f;
+		return PVector.angleBetween(lUpperArmLCS,getOrientationY());
 	}
 	/** The angle between the left lower Arm and the left upper arm.  Is calculated in the local coordinate system!
-	 *  @return The angle between the left lower Arm and the left upper arm. 0f if local coordinate system is not calculated*/
+	 *  @return The angle between the left lower Arm and the left upper arm.*/
 	public float getAngleLeftLowerArm() {
-		if (localCoordSysCalculated)
-			return PVector.angleBetween(lLowerArmLCS,lUpperArmLCS);
-		else
-			return 0f;
+		return PVector.angleBetween(lLowerArmLCS,lUpperArmLCS);
 	}
 	/** The angle between the right upper Arm and the body axis.  Is calculated in the local coordinate system!
-	 *  @return The angle between the right upper Arm and the body axis. 0f if local coordinate system is not calculated*/
+	 *  @return The angle between the right upper Arm and the body axis. */
 	public float getAngleRightUpperArm() {
-		if (localCoordSysCalculated)
-			return PVector.angleBetween(rUpperArmLCS,getOrientationY());
-		else
-			return 0f;
+		return PVector.angleBetween(rUpperArmLCS,getOrientationY());
 	}
 	/** The angle between the right lower Arm and the right upper arm.  Is calculated in the local coordinate system!
-	 *  @return The angle between the right lower Arm and the right upper arm. 0f if local coordinate system is not calculated*/
+	 *  @return The angle between the right lower Arm and the right upper arm. */
 	public float getAngleRightLowerArm() {
-		if (localCoordSysCalculated)
-			return PVector.angleBetween(rLowerArmLCS,rUpperArmLCS);
-		else
-			return 0f;
+		return PVector.angleBetween(rLowerArmLCS,rUpperArmLCS);
 	}
 	
 	
 	// -----------------------------------------------------------------
 	// MATH ACCESS
-	/** Mirror Plane is defined in HNF: r*n0-d = 0. works only if mirror plane has been calculated, i.e. skeleton is in mirror therapy mode.
-	 *  @return the r vector of the mirrorPlane if mirror plane was calculated. Else 0-vector */
-	public PVector getRVectorMirrorPlane () {
-		if (mirrorPlaneCalculated && math != null)
-			return math.getRMP();
-		else
-			return new PVector();
+	/** All planes are defined in HNF: r*n0-d = 0. Sagittal Plane is mirror plane!
+	 *  @return the r vector of the sagittal body plane. */
+	public PVector getRVectorSagittalPlane () {
+			return math.getSagittalPlane().r;
 	}
-	/** Mirror Plane is defined in HNF: r*n0-d = 0. works only if mirror plane has been calculated, i.e. skeleton is in mirror therapy mode.
-	 *  @return the normal vector of the mirrorPlane if mirror plane was calculated. Else 0-vector */
-	public PVector getN0VectorMirrorPlane () {
-		if (mirrorPlaneCalculated && math != null)
-			return math.getN0MP();
-		else
-			return new PVector();
+	/** All planes are defined in HNF: r*n0-d = 0. Sagittal Plane is mirror plane!
+	 *  @return the n0 vector of the sagittal body plane. */
+	public PVector getN0VectorSagittalPlane () {
+			return math.getSagittalPlane().n0;
 	}
-	/** Mirror Plane is defined in HNF: r*n0-d = 0. works only if mirror plane has been calculated, i.e. skeleton is in mirror therapy mode.
-	 *  @return the distance of the mirrorPlane to the origin if mirror plane was calculated. Else 0f */
-	public float getDValueMirrorPlane () {
-		if (mirrorPlaneCalculated && math != null)
-			return math.getDMP();
-		else
-			return 0f;
+	/** All planes are defined in HNF: r*n0-d = 0. Sagittal Plane is mirror plane!
+	 *  @return the d value of the sagittal body plane. */
+	public float getDValueSagittalPlane () {
+			return math.getSagittalPlane().d;
 	}
-	/** returns the origin of the local coordsys. Equals Neck Vector. works only if localCoordSys has been calculated
-	 *  @return the origin. 0-vector if localCoordSys has not been calculated */
+	/** All planes are defined in HNF: r*n0-d = 0.
+	 *  @return the r vector of the frontal body plane. */
+	public PVector getRVectorFrontalPlane () {
+			return math.getFrontalPlane().r;
+	}
+	/** All planes are defined in HNF: r*n0-d = 0.
+	 *  @return the n0 vector of the frontal body plane. */
+	public PVector getN0VectorFrontalPlane () {
+			return math.getFrontalPlane().n0;
+	}
+	/** All planes are defined in HNF: r*n0-d = 0.
+	 *  @return the d value of the frontal body plane. */
+	public float getDValueFrontalPlane () {
+			return math.getFrontalPlane().d;
+	}
+	/** All planes are defined in HNF: r*n0-d = 0.
+	 *  @return the r vector of the transversal body plane. */
+	public PVector getRVectorTransversalPlane () {
+			return math.getTransversalPlane().r;
+	}
+	/** All planes are defined in HNF: r*n0-d = 0.
+	 *  @return the n0 vector of the transversal body plane. */
+	public PVector getN0VectorTransversalPlane () {
+			return math.getTransversalPlane().n0;
+	}
+	/** All planes are defined in HNF: r*n0-d = 0.
+	 *  @return the d value of the transversal body plane. */
+	public float getDValueTransversalPlane () {
+			return math.getTransversalPlane().d;
+	}
+	/** returns the origin of the local coordsys. Equals Neck Vector.
+	 *  @return the origin of the skeletons local coordinate system. */
 	public PVector getOrigin () {
-		if (localCoordSysCalculated && math != null)
-			return math.getOrigin();
-		else
-			return new PVector();
+		return math.getOrigin();
 	}
-	/** returns the local x coordinate vector. works only if localCoordSys has been calculated
-	 *  @return the local vector. 0-vector if localCoordSys has not been calculated */
+	/** returns the local x coordinate vector.
+	 *  @return the local x vector.*/
 	public PVector getOrientationX () {
-		if (localCoordSysCalculated && math != null)
-			return math.getOrientationX();
-		else
-			return new PVector();
+		return math.getOrientationX();
 	}
-	/** returns the local x coordinate vector projected to the kinects projectionn plane. works only if localCoordSys has been calculated
-	 *  @return the local vector projected to the kinects projection plane. 0-vector if localCoordSys has not been calculated */
+	/** returns the local x coordinate vector projected to the kinects projection plane.
+	 *  @return the local vector projected to the kinects projection plane. */
 	public PVector getOrientationXProjective () {
 		PVector projective = new PVector();
-		kinect.convertRealWorldToProjective(this.getOrientationX(),projective); // check for localCoordSysCalculated in getOrientationX
+		kinect.convertRealWorldToProjective(this.getOrientationX(),projective);
 		return projective;
 	}
-	/** returns the angle between the local x vector and the global x vector. works only if localCoordSys has been calculated
-	 *  @return the angle, float between 0 and PI. 0f when localCoordSys has not been calculated */
+	/** returns the angle between the local x vector and the global x vector.
+	 *  @return the angle, float between 0 and PI.  */
 	public float getOrientationAlpha () {
-		return PVector.angleBetween(this.getOrientationX(),new PVector(1,0,0)); // check for localCoordSysCalculated in getOrientationX
+		return PVector.angleBetween(this.getOrientationX(),new PVector(1,0,0)); 
 	}
-	/** returns the local y coordinate vector. works only if localCoordSys has been calculated
-	 *  @return the local vector. 0-vector if localCoordSys has not been calculated */
+	/** returns the local y coordinate vector.
+	 *  @return the local y vector. */
 	public PVector getOrientationY () {
-		if (localCoordSysCalculated && math != null)
-			return math.getOrientationY();
-		else
-			return new PVector();
+		return math.getOrientationY();
 	}
-	/** returns the local y coordinate vector projected to the kinects projectionn plane. works only if localCoordSys has been calculated
-	 *  @return the local vector projected to the kinects projection plane. 0-vector if localCoordSys has not been calculated */
+	/** returns the local y coordinate vector projected to the kinects projection plane.
+	 *  @return the local vector projected to the kinects projection plane. */
 	public PVector getOrientationYProjective () {
 		PVector projective = new PVector();
-		kinect.convertRealWorldToProjective(getOrientationY(),projective); // check for localCoordSysCalculated in getOrientationY
+		kinect.convertRealWorldToProjective(getOrientationY(),projective);
 		return projective;
 	}
-	/** returns the angle between the local y vector and the global y vector. works only if localCoordSys has been calculated
-	 *  @return the angle, float between 0 and PI. 0f when localCoordSys has not been calculated */
+	/** returns the angle between the local y vector and the global y vector. 
+	 *  @return the angle, float between 0 and PI.  */
 	public float getOrientationBeta () {
-		return PVector.angleBetween(getOrientationY(),new PVector(0,1,0)); // check for localCoordSysCalculated in getOrientationY
+		return PVector.angleBetween(getOrientationY(),new PVector(0,1,0)); 
 	}
-	/** returns the local z coordinate vector. works only if localCoordSys has been calculated
-	 *  @return the local vector. 0-vector if localCoordSys has not been calculated */
+	/** returns the local z coordinate vector.
+	 *  @return the local z vector.*/
 	public PVector getOrientationZ () {
-		if (localCoordSysCalculated && math != null)
-			return math.getOrientationZ();
-		else
-			return new PVector();
+		return math.getOrientationZ();
 	}
-	/** returns the local z coordinate vector projected to the kinects projectionn plane. works only if localCoordSys has been calculated
-	 *  @return the local vector projected to the kinects projection plane. 0-vector if localCoordSys has not been calculated */
+	/** returns the local z coordinate vector projected to the kinects projection plane.
+	 *  @return the local vector projected to the kinects projection plane.*/
 	public PVector getOrientationZProjective () {
 		PVector projective = new PVector();
-		kinect.convertRealWorldToProjective(getOrientationZ(),projective); // check for localCoordSysCalculated in getOrientationZ
+		kinect.convertRealWorldToProjective(getOrientationZ(),projective); 
 		return projective;
 	}
-	/** returns the angle between the local z vector and the global z vector. works only if localCoordSys has been calculated
-	 *  @return the angle, float between 0 and PI. 0f when localCoordSys has not been calculated*/
+	/** returns the angle between the local z vector and the global z vector. 
+	 *  @return the angle, float between 0 and PI. */
 	public float getOrientationGamma () {
-		return PVector.angleBetween(getOrientationZ(),new PVector(0,0,1)); // check for localCoordSysCalculated in getOrientationZ
+		return PVector.angleBetween(getOrientationZ(),new PVector(0,0,1)); 
 	}
 	
 	
@@ -793,53 +747,49 @@ public class Skeleton {
 	}
 	
 	private void updateMirroredJointPositions () {
-		if (mirrorPlaneCalculated && math != null) {
-			switch (mirrorTherapy) {
-				case MIRROR_THERAPY_LEFT:
-					// mirror left elbow to right elbow
-					joint[RIGHT_ELBOW].set(math.mirrorJointVector(joint[LEFT_ELBOW]));
-					jointConfidence[RIGHT_ELBOW] = jointConfidence[LEFT_ELBOW];
-					// mirror left hand to right hand
-					joint[RIGHT_HAND].set(math.mirrorJointVector(joint[LEFT_HAND]));
-					jointConfidence[RIGHT_HAND] = jointConfidence[LEFT_HAND];
-					break;
-				case MIRROR_THERAPY_RIGHT:
-					// mirror right elbow to left elbow
-					joint[LEFT_ELBOW].set(math.mirrorJointVector(joint[RIGHT_ELBOW]));
-					jointConfidence[LEFT_ELBOW] = jointConfidence[RIGHT_ELBOW];
-					// mirror right hand to left hand
-					joint[LEFT_HAND].set(math.mirrorJointVector(joint[RIGHT_HAND]));
-					jointConfidence[LEFT_HAND] = jointConfidence[RIGHT_HAND];
-					break;
-			}	
+		switch (mirrorTherapy) {
+			case MIRROR_THERAPY_LEFT:
+				// mirror left elbow to right elbow
+				joint[RIGHT_ELBOW].set(math.mirrorJointVector(joint[LEFT_ELBOW]));
+				jointConfidence[RIGHT_ELBOW] = jointConfidence[LEFT_ELBOW];
+				// mirror left hand to right hand
+				joint[RIGHT_HAND].set(math.mirrorJointVector(joint[LEFT_HAND]));
+				jointConfidence[RIGHT_HAND] = jointConfidence[LEFT_HAND];
+				break;
+			case MIRROR_THERAPY_RIGHT:
+				// mirror right elbow to left elbow
+				joint[LEFT_ELBOW].set(math.mirrorJointVector(joint[RIGHT_ELBOW]));
+				jointConfidence[LEFT_ELBOW] = jointConfidence[RIGHT_ELBOW];
+				// mirror right hand to left hand
+				joint[LEFT_HAND].set(math.mirrorJointVector(joint[RIGHT_HAND]));
+				jointConfidence[LEFT_HAND] = jointConfidence[RIGHT_HAND];
+				break;
 		}
 	}
 	private void updateMirroredJointOrientations () {
-		if (mirrorPlaneCalculated && math != null) {
-			switch (mirrorTherapy) {
-				case MIRROR_THERAPY_LEFT:
-					// mirror orientation of left shoulder to right shoulder
-					jointOrientation[RIGHT_SHOULDER].set(math.mirrorOrientationMatrix(jointOrientation[LEFT_SHOULDER]));
-					jointOrientationConfidence[RIGHT_SHOULDER] = jointOrientationConfidence[LEFT_SHOULDER];
-					// mirror orientation of left elbow to right elbow
-					jointOrientation[RIGHT_ELBOW].set(math.mirrorOrientationMatrix(jointOrientation[LEFT_ELBOW]));
-					jointOrientationConfidence[RIGHT_ELBOW] = jointOrientationConfidence[LEFT_ELBOW];
-					// mirror orientation of left hand to right hand
-					jointOrientation[RIGHT_HAND].set(math.mirrorOrientationMatrix(jointOrientation[LEFT_HAND]));
-					jointOrientationConfidence[RIGHT_HAND] = jointOrientationConfidence[LEFT_HAND];
-					break;
-				case MIRROR_THERAPY_RIGHT:
-					// mirror orientation of right  shoulder to left shoulder
-					jointOrientation[LEFT_SHOULDER].set(math.mirrorOrientationMatrix(jointOrientation[RIGHT_SHOULDER]));
-					jointOrientationConfidence[LEFT_SHOULDER] = jointOrientationConfidence[RIGHT_SHOULDER];
-					// mirror orientation of right  elbow to left elbow
-					jointOrientation[LEFT_ELBOW].set(math.mirrorOrientationMatrix(jointOrientation[RIGHT_ELBOW]));
-					jointOrientationConfidence[LEFT_ELBOW] = jointOrientationConfidence[RIGHT_ELBOW];
-					// mirror orientation of right  hand to left hand
-					jointOrientation[LEFT_HAND].set(math.mirrorOrientationMatrix(jointOrientation[RIGHT_HAND]));
-					jointOrientationConfidence[LEFT_HAND] = jointOrientationConfidence[RIGHT_HAND];
-					break;
-			}
+		switch (mirrorTherapy) {
+			case MIRROR_THERAPY_LEFT:
+				// mirror orientation of left shoulder to right shoulder
+				jointOrientation[RIGHT_SHOULDER].set(math.mirrorOrientationMatrix(jointOrientation[LEFT_SHOULDER]));
+				jointOrientationConfidence[RIGHT_SHOULDER] = jointOrientationConfidence[LEFT_SHOULDER];
+				// mirror orientation of left elbow to right elbow
+				jointOrientation[RIGHT_ELBOW].set(math.mirrorOrientationMatrix(jointOrientation[LEFT_ELBOW]));
+				jointOrientationConfidence[RIGHT_ELBOW] = jointOrientationConfidence[LEFT_ELBOW];
+				// mirror orientation of left hand to right hand
+				jointOrientation[RIGHT_HAND].set(math.mirrorOrientationMatrix(jointOrientation[LEFT_HAND]));
+				jointOrientationConfidence[RIGHT_HAND] = jointOrientationConfidence[LEFT_HAND];
+				break;
+			case MIRROR_THERAPY_RIGHT:
+				// mirror orientation of right  shoulder to left shoulder
+				jointOrientation[LEFT_SHOULDER].set(math.mirrorOrientationMatrix(jointOrientation[RIGHT_SHOULDER]));
+				jointOrientationConfidence[LEFT_SHOULDER] = jointOrientationConfidence[RIGHT_SHOULDER];
+				// mirror orientation of right  elbow to left elbow
+				jointOrientation[LEFT_ELBOW].set(math.mirrorOrientationMatrix(jointOrientation[RIGHT_ELBOW]));
+				jointOrientationConfidence[LEFT_ELBOW] = jointOrientationConfidence[RIGHT_ELBOW];
+				// mirror orientation of right  hand to left hand
+				jointOrientation[LEFT_HAND].set(math.mirrorOrientationMatrix(jointOrientation[RIGHT_HAND]));
+				jointOrientationConfidence[LEFT_HAND] = jointOrientationConfidence[RIGHT_HAND];
+				break;
 		}	
 	}
 	private void transformToLCS () {
