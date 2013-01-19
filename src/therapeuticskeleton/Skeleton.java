@@ -27,6 +27,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package therapeuticskeleton;
 
+import java.io.BufferedWriter;
+
 import SimpleOpenNI.SimpleOpenNI;
 import processing.core.*;
 
@@ -62,6 +64,15 @@ public class Skeleton {
 	public static final short RIGHT_KNEE = 13;
 	public static final short RIGHT_FOOT = 14;
 	
+	// clinical directions
+	public static final short NEUTRAL = 0;
+	public static final short SUPERIOR = 1;
+	public static final short INFERIOR = 2;
+	public static final short POSTERIOR = 3;
+	public static final short ANTERIOR = 4;
+	public static final short LEFT_LATERAL = 5;
+	public static final short RIGHT_LATERAL = 6;
+	
 	// The interface to talk to kinect
 	private SimpleOpenNI kinect;
 	
@@ -93,9 +104,8 @@ public class Skeleton {
 	private boolean evaluateStatistics = true;
 	// control state of skeleton
 	private boolean isUpdated = false;
-	private int updateCycle = 0; // count the number of update calls for time relevant calculations //TODO: use frameCount instead 
-	private int frameCount = 0;
-	private float frameRate = 0;
+	private int currentFrameCount = 0;
+	private float currentFrameRate = 0;
 	// skeleton of user
 	private int userId;
 
@@ -116,36 +126,17 @@ public class Skeleton {
 	 *  @param _calculateLocalCoordSys switches calculation of the local coordinate system on/off. If switched on, local coordination system will be calculated and joints will be transformed to it 
 	 *  @param _evaluatePostureAndGesture switches calculation of the posture and gesture on/off. Switching it on requires local coord sys to be calculated 
 	 *  @param _mirrorTherapy Sets the skeleton to mirror one body side to the other. When mirrorTherapy is set on, mirrorPlane will be calculated. Short value should correspond to skeleton constants. If out of range, mirror therapy will be switched off */
-	public Skeleton (SimpleOpenNI _kinect, int _userId, boolean _fullBodyTracking, boolean _evaluatePostureAndGesture, short _mirrorTherapy, boolean _evaluateStatistics) {
+	public Skeleton (SimpleOpenNI _kinect, int _userId, boolean _fullBodyTracking) {
 		kinect = _kinect;
 		userId = _userId;
 		fullBodyTracking = _fullBodyTracking;
-		evaluatePostureAndGesture = _evaluatePostureAndGesture;
-		evaluateStatistics = _evaluateStatistics;
-		if (_mirrorTherapy >= MIRROR_THERAPY_OFF && _mirrorTherapy <= MIRROR_THERAPY_RIGHT) 
-			mirrorTherapy = _mirrorTherapy;
-		setup();
-	}
-	/** Constructor for the Skeleton. Defaults used for setup.
-	 *  @param _kinect Handle to the SimpleOpenNI object. Skeleton will maintain its status in the update method by talking to SimpleOpenNI directly.
-	 *  @param _userId the user ID of the skeleton */
-	public Skeleton (SimpleOpenNI _kinect, int _userId) {
-		kinect = _kinect;
-		userId = _userId;
-		setup();
-	}
-	// helper for constructor
-	private void setup () {
 		for (int i=0; i<15; i++){
 			joint[i] = new PVector();
 			jointLCS[i] = new PVector();
 			jointOrientation[i] = new PMatrix3D();
 			jointDelta[i] = 0f;
 		}
-		posture = new SkeletonPosture(this);
-		gesture = new SkeletonGesture(this);
 		math = new SkeletonMath(this);
-		statistics = new SkeletonStatistics(this);
 	}
 
 	/** Update method. Call it to update status of skeleton. Skeleton will talk to SimpleOpenNI directly and will do all the necessary math for updating its status according to set up 
@@ -155,32 +146,33 @@ public class Skeleton {
 		isUpdated = false;
 		gestureEvaluated = false;
 		postureEvaluated = false;
-		frameCount = _frameCount;
-		frameRate = _frameRate;
+		currentFrameCount = _frameCount;
+		currentFrameRate = _frameRate;
 		
 		// Update all internal information
 		updateJointPositions();
 		updateJointOrientations();
 
-		math.calculateBodyPlanes();
+		// the order is important since body planes use information of local coordinate system
 		math.calculateLocalCoordSys();
-		transformToLCS();
-		
+		math.calculateBodyPlanes();
 		if (mirrorTherapy != MIRROR_THERAPY_OFF) {
 			updateMirroredJointPositions();
 			updateMirroredJointOrientations();
 		}
-		if (evaluatePostureAndGesture) {
+		
+		// transform updated skeleton to local coordinate system
+		transformToLCS();
+		
+		if (evaluatePostureAndGesture && posture != null && gesture != null) {
 			posture.evaluate();
 			postureEvaluated = true;
-			gesture.evaluate(updateCycle);
+			gesture.evaluate(currentFrameCount);
 			gestureEvaluated = true;
 		}
-		if (evaluateStatistics) {
-			statistics.update();
+		if (evaluateStatistics && statistics != null) {
+			statistics.update(currentFrameCount,currentFrameRate);
 		}
-		
-		updateCycle++; //TODO: use framerate instead of updateCycles
 		isUpdated = true;
 	}
 	
@@ -211,14 +203,44 @@ public class Skeleton {
 		return fullBodyTracking;
 	}
 	/** Setter for evaluating statistics for the skeleton. If switched on, statistics will be updated
-	 *  @param _evaluateStatistics switch to set evaluating statistics on/off */
-	public void setEvaluateStatistics (boolean _evaluateStatistics) {
+	 *  If was switched on before, new statistics object will be generated! Old statistics will be lost.
+	 *  @param _evaluateStatistics switch to set evaluating statistics on/off 
+	 *  @param _buffer the file buffer to which statistics will be written. if null, statistics will not be logged */
+	public void setEvaluateStatistics (boolean _evaluateStatistics, BufferedWriter _buffer) {
 		evaluateStatistics = _evaluateStatistics;
+		if (evaluateStatistics) {
+			statistics = new SkeletonStatistics(this);
+			if (_buffer != null) {
+				statistics.startStatisticsLogging(_buffer);
+			}
+		} else {
+			if (statistics != null) {
+				statistics.stopStatisticsLogging();
+				statistics = null;
+			}
+		}
 	}
 	/** Getter for evaluating statistics for the skeleton.
-	 *  @return boolean of evaluateStatistics switch */
+	 *  @return boolean of evaluateStatistics-switch */
 	public boolean getEvaluateStatistics () {
 		return evaluateStatistics;
+	}
+	/** Setter for evaluating posture and gesture for the skeleton. If switched on, posture and gesture will be updated
+	 *  @param _evaluatePostureAndGesture switch to set evaluating posture and gesture on/off */
+	public void setEvaluatePostureAndGesture (boolean _evaluatePostureAndGesture) {
+		evaluatePostureAndGesture = _evaluatePostureAndGesture;
+		if (evaluatePostureAndGesture) {
+			posture = new SkeletonPosture(this);
+			gesture = new SkeletonGesture(this);
+		} else {
+			posture = null;
+			gesture = null;
+		}
+	}
+	/** Getter for evaluating posture and gesture for the skeleton.
+	 *  @return boolean of evaluatePostureAndGesture-switch */
+	public boolean getEvaluatePostureAndGesture () {
+		return evaluatePostureAndGesture;
 	}
 	/** Getter for status of the skeleton. Is used as a lock, methods of skeleton will return unsafe values, as long update function is not done.
 	 *  @return true if the status of the skeleton is fully updated */
@@ -262,33 +284,24 @@ public class Skeleton {
 			return -1f;
 		}
 	}
-	
-	// -----------------------------------------------------------------
-	// GETTERS FOR STATE OF SKELETON
-	/** Getter for frame count. Used for statistics
-	 *  @return the current frame count */
-	public int getFrameCount () {
-		return frameCount;
-	}
-	/** Getter for frame rate. Used for statistics
-	 *  @return the current frame rate */
-	public float getFrameRate () {
-		return frameRate;
-	}
 
 	// -----------------------------------------------------------------
 	// GETTERS FOR STATISTICS OF SKELETON
 	/** Getter for SkeletonStatistics. The whole class object is returned to be displayed in the main applet.
 	 *  This getter provides access to the updated statistics object.
-	 *  @return the skeleton statistics object */
+	 *  @return the skeleton statistics object, null if statistics evaluation is switched off */
 	public SkeletonStatistics getLiveStatistics () {
 		return statistics;
 	}
 	/** Getter for SkeletonStatistics. The whole class object is returned to be displayed in the main applet.
 	 *  This getter returns a copy of the statistics object that is not linked to a skeleton object and won't be further updated.
-	 *  @return a copy of the skeleton statistics object */
+	 *  @return a copy of the skeleton statistics object, null if statistics evluation is switched off */
 	public SkeletonStatistics getFinalStatistics () {
-		return new SkeletonStatistics(statistics);
+		if (statistics != null) {
+			return new SkeletonStatistics(statistics);
+		} else {
+			return null;
+		}
 	}
 	
 	// -----------------------------------------------------------------
@@ -472,6 +485,30 @@ public class Skeleton {
 		PVector axis1 = PVector.sub(joint[joint11],joint[joint12]);
 		return PVector.angleBetween(axis1,new PVector(0,0,1));
 	}
+	/** returns the angle between the limb-vector and the normal vector of the sagittal body plane
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the angle, float between 0 and PI */
+	public float angleToSagittalPlaneN0 (short joint11, short joint12) {
+		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
+		return PVector.angleBetween(axis1,math.getSagittalPlane().n0);
+	}
+	/** returns the angle between the limb-vector and the normal vector of the frontal body plane
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the angle, float between 0 and PI */
+	public float angleToFrontalPlaneN0 (short joint11, short joint12) {
+		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
+		return PVector.angleBetween(axis1,math.getFrontalPlane().n0);
+	}
+	/** returns the angle between the limb-vector and the normal vector of the transversal body plane
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the angle, float between 0 and PI */
+	public float angleToTransversalPlaneN0 (short joint11, short joint12) {
+		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
+		return PVector.angleBetween(axis1,math.getTransversalPlane().n0);
+	}
 	/** The angle between the left upper Arm and the body axis. Is calculated in the local coordinate system!
 	 *  @return The angle between the left upper Arm and the body axis.*/
 	public float getAngleLeftUpperArm() {
@@ -493,9 +530,86 @@ public class Skeleton {
 		return PVector.angleBetween(rLowerArmLCS,rUpperArmLCS);
 	}
 	
-	
 	// -----------------------------------------------------------------
-	// MATH ACCESS
+	// ACCESS TO CLINICAL RELEVANT INFORMATION
+	/** returns the orientation of a limb with respect to the frontal plane
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the orientation, short constant of skeleton (left_lateral, right_lateral, neutral) */
+	public short getOrientationInFrontalPlane (short joint11, short joint12) {
+		// +X-axis from torso->right
+		if (jointLCS[joint11].x < jointLCS[joint12].x) {
+			return LEFT_LATERAL;
+		} else if (jointLCS[joint11].x > jointLCS[joint12].x) {
+			return RIGHT_LATERAL;
+		} else {
+			return NEUTRAL;
+		}
+	}
+	/** returns the orientation of a limb with respect to the sagittal plane
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the orientation, short constant of skeleton (posterior, anterior, neutral) */
+	public short getOrientationInSagittalPlane (short joint11, short joint12) {
+		// +Z-axis from torso->front
+		if (jointLCS[joint11].z < jointLCS[joint12].z) {
+			return POSTERIOR;
+		} else if (jointLCS[joint11].z > jointLCS[joint12].z) {
+			return ANTERIOR;
+		} else {
+			return NEUTRAL;
+		}
+	}
+	/** returns the orientation of a limb with respect to the transversal plane
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the orientation, short constant of skeleton (inferior, superior, neutral) */
+	public short getOrientationInTransversalPlane (short joint11, short joint12) {
+		// +Y-axis from torso->head
+		if (jointLCS[joint11].y < jointLCS[joint12].y) {
+			return INFERIOR;
+		} else if (jointLCS[joint11].y > jointLCS[joint12].y) {
+			return SUPERIOR;
+		} else {
+			return NEUTRAL;
+		}
+	}
+	/** returns the projection of a limb on to the sagittal plane
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the projective of the limb-vector in the sagittal plane */
+	public PVector projectionOnSagittalPlane (short joint11, short joint12) {
+		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
+		PVector n0 = new PVector();
+		n0.set(math.getSagittalPlane().n0);
+		n0.mult(PVector.dot(axis1,n0));
+		return PVector.sub(axis1,n0);
+	}
+	/** returns the projection of a limb on to the frontal plane
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the projective of the limb-vector in the frontal plane */
+	public PVector projectionOnFrontalPlane (short joint11, short joint12) {
+		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
+		PVector n0 = new PVector();
+		n0.set(math.getFrontalPlane().n0);
+		n0.mult(PVector.dot(axis1,n0));
+		return PVector.sub(axis1,n0);
+	}
+	/** returns the projection of a limb on to the transversal plane
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the projective of the limb-vector in the transversal plane */
+	public PVector projectionOnTransversalPlane (short joint11, short joint12) {
+		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
+		PVector n0 = new PVector();
+		n0.set(math.getTransversalPlane().n0);
+		n0.mult(PVector.dot(axis1,n0));
+		return PVector.sub(axis1,n0);
+	}
+	
+	
+	
 	/** All planes are defined in HNF: r*n0-d = 0. Sagittal Plane is mirror plane!
 	 *  @return the r vector of the sagittal body plane. */
 	public PVector getRVectorSagittalPlane () {
@@ -541,7 +655,7 @@ public class Skeleton {
 	public float getDValueTransversalPlane () {
 			return math.getTransversalPlane().d;
 	}
-	/** returns the origin of the local coordsys. Equals Neck Vector.
+	/** returns the origin of the local coordsys. Equals Torso Vector.
 	 *  @return the origin of the skeletons local coordinate system. */
 	public PVector getOrigin () {
 		return math.getOrigin();
@@ -553,7 +667,7 @@ public class Skeleton {
 	}
 	/** returns the local x coordinate vector projected to the kinects projection plane.
 	 *  @return the local vector projected to the kinects projection plane. */
-	public PVector getOrientationXProjective () {
+	public PVector getOrientationXRealWorldProjective () {
 		PVector projective = new PVector();
 		kinect.convertRealWorldToProjective(this.getOrientationX(),projective);
 		return projective;
@@ -570,7 +684,7 @@ public class Skeleton {
 	}
 	/** returns the local y coordinate vector projected to the kinects projection plane.
 	 *  @return the local vector projected to the kinects projection plane. */
-	public PVector getOrientationYProjective () {
+	public PVector getOrientationYRealWorldProjective () {
 		PVector projective = new PVector();
 		kinect.convertRealWorldToProjective(getOrientationY(),projective);
 		return projective;
@@ -587,7 +701,7 @@ public class Skeleton {
 	}
 	/** returns the local z coordinate vector projected to the kinects projection plane.
 	 *  @return the local vector projected to the kinects projection plane.*/
-	public PVector getOrientationZProjective () {
+	public PVector getOrientationZRealWorldProjective () {
 		PVector projective = new PVector();
 		kinect.convertRealWorldToProjective(getOrientationZ(),projective); 
 		return projective;
@@ -609,12 +723,12 @@ public class Skeleton {
 		else
 			return SkeletonPosture.NO_POSE;
 	}
-	/** Returns the last gesture evaluated within _lookAtPastUpdatedCycles, if calculation is activated and gesture was evaluated in last update cycle. See SkeletonGestures class for details
-	 *  @param _lookAtPastUpdateCycles the number of past update cycles during which the gesture should have been recognized.
+	/** Returns the last gesture evaluated within _lookAtPastFrames, if calculation is activated and gesture was evaluated in last update cycle. See SkeletonGestures class for details
+	 *  @param _lookAtPastFrames the number of past update cycles during which the gesture should have been recognized.
 	 *  @return current upper body gesture. short, constants of SkeletonGestures class, NO_GESTURE if no gesture was recognized in the given past update cycles or gesture evaluation is switched off */
-	public short getLastUpperBodyGesture (int _lookAtPastUpdateCycles) {
+	public short getLastUpperBodyGesture (int _lookAtPastFrames) {
 		if (gesture != null && gestureEvaluated)
-			return gesture.getLastUpperBodyGesture(updateCycle-_lookAtPastUpdateCycles);
+			return gesture.getLastUpperBodyGesture(currentFrameCount-_lookAtPastFrames);
 		else
 			return SkeletonGesture.NO_GESTURE;
 	}
@@ -751,17 +865,21 @@ public class Skeleton {
 			case MIRROR_THERAPY_LEFT:
 				// mirror left elbow to right elbow
 				joint[RIGHT_ELBOW].set(math.mirrorJointVector(joint[LEFT_ELBOW]));
+				jointDelta[RIGHT_ELBOW] = jointDelta[LEFT_ELBOW];
 				jointConfidence[RIGHT_ELBOW] = jointConfidence[LEFT_ELBOW];
 				// mirror left hand to right hand
 				joint[RIGHT_HAND].set(math.mirrorJointVector(joint[LEFT_HAND]));
+				jointDelta[RIGHT_HAND] = jointDelta[LEFT_HAND];
 				jointConfidence[RIGHT_HAND] = jointConfidence[LEFT_HAND];
 				break;
 			case MIRROR_THERAPY_RIGHT:
 				// mirror right elbow to left elbow
 				joint[LEFT_ELBOW].set(math.mirrorJointVector(joint[RIGHT_ELBOW]));
+				jointDelta[LEFT_ELBOW] = jointDelta[RIGHT_ELBOW];
 				jointConfidence[LEFT_ELBOW] = jointConfidence[RIGHT_ELBOW];
 				// mirror right hand to left hand
 				joint[LEFT_HAND].set(math.mirrorJointVector(joint[RIGHT_HAND]));
+				jointDelta[LEFT_HAND] = jointDelta[RIGHT_HAND];
 				jointConfidence[LEFT_HAND] = jointConfidence[RIGHT_HAND];
 				break;
 		}

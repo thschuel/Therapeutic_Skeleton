@@ -12,13 +12,13 @@ public class SkeletonGesture {
 	public static final short NUMBER_OF_GESTURES = 2;
 	
 	private short currentUpperBodyGesture = NO_GESTURE;
-	private int updateCycleLastBodyGestureRecognized = -9999;
+	private int frameLastBodyGestureRecognized = -9999;
 	private float gestureTolerance = 0.5f;
 	private float gestureAngleTolerance = PApplet.radians(20)*gestureTolerance;
 
 	// defining variables for push gesture
-	private final int pushGestureMaxCycles = 30; // max update cycles to perform push gesture
-	public static int pushGestureStartCycle = -9999;
+	private final int pushGestureMaxFrames = 30; // max update cycles to perform push gesture
+	public static int pushGestureStartFrame = -9999;
 	
 	private Skeleton skeleton = null;
 	
@@ -50,7 +50,7 @@ public class SkeletonGesture {
 	 *  @param _maxAge the maximum time in the past the last gesture should have been recognized.
 	 *  @return current upper body gesture. short, constants of Skeleton class, NO_GESTURE if no gesture was recognized in the given past update cycles or gesture evaluation is switched off */
 	public short getLastUpperBodyGesture (int _maxAge) {
-		if (updateCycleLastBodyGestureRecognized >= _maxAge)
+		if (frameLastBodyGestureRecognized >= _maxAge)
 			return currentUpperBodyGesture;
 		else
 			return NO_GESTURE;
@@ -59,15 +59,15 @@ public class SkeletonGesture {
 	/** Evaluate gestures and store results internally. Access recognized gestures using getter-methods. 
 	 *  @param _updateCycle The current update cycle of the main applet. Is used to evaluate time critical gestures. 
 	 * */
-	public void evaluate (int _updateCycle) {
-		if (evaluatePushGesture(_updateCycle)) {
+	public void evaluate (int _frameCount) {
+		if (evaluatePushGesture(_frameCount)) {
 			currentUpperBodyGesture = PUSH_GESTURE;
-			updateCycleLastBodyGestureRecognized = _updateCycle;
+			frameLastBodyGestureRecognized = _frameCount;
 		} 
 	}
 	
 	// helper functions
-	private boolean evaluatePushGesture (int _updateCycle) {
+	private boolean evaluatePushGesture (int _frameCount) {
 		// push gesture is found when a movement of the hands parallel to the body z-axis has occured and the end pose is reached. 
 		// The end pose is recognized when upper and lower arms form a straight line parallel to body z-axis. 
 		PVector rHandShoulder = PVector.sub(skeleton.getJointLCS(Skeleton.RIGHT_SHOULDER),skeleton.getJointLCS(Skeleton.RIGHT_HAND));
@@ -78,9 +78,9 @@ public class SkeletonGesture {
 			float handShoulderDistanceStartPose = 200f+200f*gestureTolerance;
 			if (rHandShoulder.mag() <= handShoulderDistanceStartPose && lHandShoulder.mag() <= handShoulderDistanceStartPose) {
 				// start pose recognized
-				pushGestureStartCycle = _updateCycle;
+				pushGestureStartFrame = _frameCount;
 			}
-			if (_updateCycle-pushGestureStartCycle <= pushGestureMaxCycles) {
+			if (_frameCount-pushGestureStartFrame <= pushGestureMaxFrames) {
 				float angleRightArm = PVector.angleBetween(skeleton.getRightUpperArmLCS(),skeleton.getRightLowerArmLCS());
 				float angleLeftArm = PVector.angleBetween(skeleton.getLeftUpperArmLCS(),skeleton.getLeftLowerArmLCS());
 				if (SkeletonMath.isValueBetween(angleRightArm,0,PApplet.radians(30)+gestureAngleTolerance) && SkeletonMath.isValueBetween(angleLeftArm,0,PApplet.radians(30)+gestureAngleTolerance)) {
@@ -94,11 +94,11 @@ public class SkeletonGesture {
 				}
 			} else {
 				// didn't recognize end pose within max cycles
-				pushGestureStartCycle = -9999;
+				pushGestureStartFrame = -9999;
 			}
 		} else {
 			// the movement needs to be parallel to z axis all the time
-			pushGestureStartCycle = -9999;
+			pushGestureStartFrame = -9999;
 		}
 		return false;
 	}

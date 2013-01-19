@@ -46,15 +46,15 @@ public class SkeletonMath {
 	}
 	
 	// evaluate local coord sys
-	// origin: neck
+	// origin: torso
 	// orientation: 
-	// +x==right_shoulder-left_shoulder, 
-	// -y==orthogonal on +x and pointing to torso
-	// +z==cross product of x and y
+	// +x-axis==left_shoulder -> right_shoulder
+	// -y-axis==orthogonal on +x and pointing to torso
+	// +z-axis==cross product of x and y
 	public void calculateLocalCoordSys () {
-		origin = skeleton.getJoint(Skeleton.NECK);
+		origin = skeleton.getJoint(Skeleton.TORSO);
 		// *** calculating local coordSys
-		// +x-axis==right_shoulder-left_shoulder, 
+		// +x-axis==left_shoulder -> right_shoulder, 
 		orientationX = PVector.sub(skeleton.getJoint(Skeleton.RIGHT_SHOULDER),skeleton.getJoint(Skeleton.LEFT_SHOULDER));
 		// +y==orthogonal to +x-axis, pointing from torso to x-axis. 
 		// task: find point on orientationX
@@ -64,13 +64,13 @@ public class SkeletonMath {
 		// - find lambda of crosspoint of that line with the plane: insert straight line as X into plane
 		// - use lambda in straight line equation to get crosspoint
 		// - +y is crosspoint-torso
-		float lambda = skeleton.getJoint(Skeleton.TORSO).dot(orientationX);
+		float lambda = origin.dot(orientationX);
 		lambda -= orientationX.dot(skeleton.getJoint(Skeleton.LEFT_SHOULDER)); 
 		lambda /= orientationX.dot(orientationX);
 		PVector crossPoint = PVector.add(skeleton.getJoint(Skeleton.LEFT_SHOULDER),PVector.mult(orientationX,lambda));
-		orientationY = PVector.sub(crossPoint,skeleton.getJoint(Skeleton.TORSO));
+		orientationY = PVector.sub(crossPoint,origin);
 		// =z-axis is cross product of y and x axis
-		orientationZ = orientationY.cross(orientationX);
+		orientationZ = orientationX.cross(orientationY);
 		
 		orientationX.normalize();
 		orientationY.normalize();
@@ -92,7 +92,17 @@ public class SkeletonMath {
 	
 	// MIRROR THERAPY CAPABILITY
 	// calculate body planes in HNF, Sagittal body plane is mirror plane
+	// planes are given through local coordinate system. n0 of planes is the corresponding origin vector, r is always torso
 	public void calculateBodyPlanes () {
+		
+		frontal.r = sagittal.r = transversal.r = origin;
+		frontal.n0 = orientationZ;
+		sagittal.n0 = orientationX;
+		transversal.n0 = orientationY;
+		frontal.d = PVector.dot(frontal.r,frontal.n0);
+		sagittal.d = PVector.dot(sagittal.r,sagittal.n0);
+		transversal.d = PVector.dot(transversal.r,transversal.n0);
+		/* OLD CALCULATION. IS REDUNDANT SINCE LCS HOLDS THE SAME INFORMATION
 		// calculate frontal body plane defined by Shoulder and Torso points in HNF
 		// HNF: r*n0-d = 0
 		// r is position vector of any point in the plane
@@ -100,7 +110,7 @@ public class SkeletonMath {
 		// n0 is cross product of two vectors in the plane
 		PVector temp1 = PVector.sub(skeleton.getJoint(Skeleton.LEFT_SHOULDER),frontal.r);
 		PVector temp2 = PVector.sub(skeleton.getJoint(Skeleton.RIGHT_SHOULDER),frontal.r);
-		frontal.n0 = temp1.cross(temp2);
+		frontal.n0 = temp2.cross(temp1);
 		frontal.n0.normalize();
 		frontal.d = PVector.dot(frontal.r,frontal.n0);
 		
@@ -116,6 +126,7 @@ public class SkeletonMath {
 		transversal.n0 = frontal.n0.cross(sagittal.n0);
 		transversal.n0.normalize();
 		transversal.d = PVector.dot(transversal.r,transversal.n0);
+		*/
 	}
 	
 	// mirror joint
