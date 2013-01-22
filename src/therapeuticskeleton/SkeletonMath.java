@@ -77,9 +77,9 @@ public class SkeletonMath {
 		orientationZ.normalize();
 		
 		transformCoordSys = new PMatrix3D (orientationX.x,orientationY.x,orientationZ.x,origin.x,
-																 orientationX.y,orientationY.y,orientationZ.y,origin.y,
-																 orientationX.z,orientationY.z,orientationZ.z,origin.z,
-																 0f,0f,0f,1f);
+										   orientationX.y,orientationY.y,orientationZ.y,origin.y,
+										   orientationX.z,orientationY.z,orientationZ.z,origin.z,
+										   0f,0f,0f,1f);
 		transformCoordSysInv = new PMatrix3D(transformCoordSys);
 		transformCoordSysInv.invert();
 	}

@@ -5,15 +5,10 @@ import java.util.ArrayList;
 import processing.core.*;
 
 public class SkeletonStatistics {
-	private ArrayList<PVector> historyLeftHandLCS = new ArrayList<PVector>();
-	private ArrayList<PVector> historyLeftElbowLCS = new ArrayList<PVector>();
-	private ArrayList<PVector> historyRightHandLCS = new ArrayList<PVector>();
-	private ArrayList<PVector> historyRightElbowLCS = new ArrayList<PVector>();
-	
-	private PVector lastSkeletonPosition = new PVector();
-	private PVector lastTorsoLCS = new PVector();
-	private PVector lastLeftShoulderLCS = new PVector();
-	private PVector lastRightShoulderLCS = new PVector();
+	private ArrayList<PVector> historyLeftHand = new ArrayList<PVector>();
+	private ArrayList<PVector> historyLeftElbow = new ArrayList<PVector>();
+	private ArrayList<PVector> historyRightHand = new ArrayList<PVector>();
+	private ArrayList<PVector> historyRightElbow = new ArrayList<PVector>();
 	
 	// overall distance of joints
 	private float distanceLeftHand = 0f;
@@ -28,10 +23,6 @@ public class SkeletonStatistics {
 	private float velocityRightElbow = 0f;
 
 	// to calculate smoothness of movement
-	private PVector lastDirectionOfMovementLeftHand = new PVector();
-	private PVector lastDirectionOfMovementLeftElbow = new PVector();
-	private PVector lastDirectionOfMovementRightHand = new PVector();
-	private PVector lastDirectionOfMovementRightElbow = new PVector();
 	private PVector directionOfMovementLeftHand = new PVector();
 	private PVector directionOfMovementLeftElbow = new PVector();
 	private PVector directionOfMovementRightHand = new PVector();
@@ -72,7 +63,7 @@ public class SkeletonStatistics {
 		if (buffer != null) {
 			try {
 				// write the header
-				buffer.write("Second,velocityLH,velocityLE,velocityRH,velocityRE,deltaLH,deltaLE,deltaRH,deltaRE\n");				
+				buffer.write("Second,velocityLH,velocityLE,velocityRH,velocityRE,deltaLH,deltaLE,deltaRH,deltaRE,xLH,yLH,zLH,xLE,yLE,zLE,xRH,yRH,zRH,xRE,yRE,zRE\n");				
 			} catch (Exception e) {
 				PApplet.println("couldn't write to file, buffer exception");
 			}
@@ -102,15 +93,10 @@ public class SkeletonStatistics {
 	/** Constructor that provides a deep copy of SkeletonStatistics. Only the linked Skeleton is not copied. 
 	 *  Can be used to get access to a not anymore updated copy at a given time of statistics. */
 	public SkeletonStatistics (SkeletonStatistics _statistics) {
-		historyLeftHandLCS.addAll(_statistics.getHistoryLeftHandLCS());
-		historyLeftElbowLCS.addAll(_statistics.getHistoryLeftElbowLCS());
-		historyRightHandLCS.addAll(_statistics.getHistoryRightHandLCS());
-		historyRightElbowLCS.addAll(_statistics.getHistoryRightElbowLCS());
-		
-		lastSkeletonPosition.set(_statistics.getLastSkeletonPosition());
-		lastTorsoLCS.set(_statistics.getLastTorsoLCS());
-		lastLeftShoulderLCS.set(_statistics.getLastLeftShoulderLCS());
-		lastRightShoulderLCS.set(_statistics.getLastRightShoulderLCS());
+		historyLeftHand.addAll(_statistics.getHistoryLeftHand());
+		historyLeftElbow.addAll(_statistics.getHistoryLeftElbow());
+		historyRightHand.addAll(_statistics.getHistoryRightHand());
+		historyRightElbow.addAll(_statistics.getHistoryRightElbow());
 		
 		distanceLeftHand = _statistics.getDistanceLeftHand();
 		distanceLeftElbow = _statistics.getDistanceLeftElbow();
@@ -154,145 +140,82 @@ public class SkeletonStatistics {
 		lastFrameCount = _frameCount;
 		if (skeleton != null) {
 			// copy joint information to new pvector to store in history
-			PVector tempLeftHandLCS = new PVector();
-			tempLeftHandLCS.set(skeleton.getJointLCS(Skeleton.LEFT_HAND));
-			PVector tempLeftElbowLCS = new PVector();
-			tempLeftElbowLCS.set(skeleton.getJointLCS(Skeleton.LEFT_ELBOW));
-			PVector tempRightHandLCS = new PVector();
-			tempRightHandLCS.set(skeleton.getJointLCS(Skeleton.RIGHT_HAND));
-			PVector tempRightElbowLCS = new PVector();
-			tempRightElbowLCS.set(skeleton.getJointLCS(Skeleton.RIGHT_ELBOW));
+			PVector tempLeftHand = new PVector();
+			tempLeftHand.set(skeleton.getJoint(Skeleton.LEFT_HAND));
+			PVector tempLeftElbow = new PVector();
+			tempLeftElbow.set(skeleton.getJoint(Skeleton.LEFT_ELBOW));
+			PVector tempRightHand = new PVector();
+			tempRightHand.set(skeleton.getJoint(Skeleton.RIGHT_HAND));
+			PVector tempRightElbow = new PVector();
+			tempRightElbow.set(skeleton.getJoint(Skeleton.RIGHT_ELBOW));
 			
+			// calculation of constant movement indicators
+			if (historyLeftHand.size() > 0) {
+				PVector lastDirectionOfMovementLeftHand = directionOfMovementLeftHand;
+				PVector lastDirectionOfMovementLeftElbow = directionOfMovementLeftElbow;
+				PVector lastDirectionOfMovementRightHand = directionOfMovementRightHand;
+				PVector lastDirectionOfMovementRightElbow = directionOfMovementRightElbow;
+				directionOfMovementLeftHand = PVector.sub(tempLeftHand,historyLeftHand.get(historyLeftHand.size()-1));
+				directionOfMovementLeftElbow = PVector.sub(tempLeftElbow,historyLeftElbow.get(historyLeftElbow.size()-1));
+				directionOfMovementRightHand = PVector.sub(tempRightHand,historyRightHand.get(historyRightHand.size()-1));
+				directionOfMovementRightElbow = PVector.sub(tempRightElbow,historyRightElbow.get(historyRightElbow.size()-1));
+				if (PVector.angleBetween(directionOfMovementLeftHand,lastDirectionOfMovementLeftHand) < PConstants.HALF_PI) counterConstantMovementLeftHand++;
+				else counterConstantMovementLeftHand = 0;
+				if (PVector.angleBetween(directionOfMovementLeftElbow,lastDirectionOfMovementLeftElbow) < PConstants.HALF_PI) counterConstantMovementLeftElbow++;
+				else counterConstantMovementLeftElbow = 0;
+				if (PVector.angleBetween(directionOfMovementRightHand,lastDirectionOfMovementRightHand) < PConstants.HALF_PI) counterConstantMovementRightHand++;
+				else counterConstantMovementRightHand = 0;
+				if (PVector.angleBetween(directionOfMovementRightElbow,lastDirectionOfMovementRightElbow) < PConstants.HALF_PI) counterConstantMovementRightElbow++;
+				else counterConstantMovementRightElbow = 0;
+			}
+
+			// store hand and elbow points to draw history
+			historyLeftHand.add(tempLeftHand);
+			historyLeftElbow.add(tempLeftElbow);
+			historyRightHand.add(tempRightHand);
+			historyRightElbow.add(tempRightElbow);
+
+			// accumulation of distance of joints 
 			distanceLeftHand += skeleton.getJointDelta(Skeleton.LEFT_HAND);
 			distanceLeftElbow += skeleton.getJointDelta(Skeleton.LEFT_ELBOW);
 			distanceRightHand += skeleton.getJointDelta(Skeleton.RIGHT_HAND);
 			distanceRightElbow += skeleton.getJointDelta(Skeleton.RIGHT_ELBOW);
+			
+			// calculation of velocity of joints in mm/second
 			velocityLeftHand = skeleton.getJointDelta(Skeleton.LEFT_HAND)*_frameRate;
 			velocityLeftElbow = skeleton.getJointDelta(Skeleton.LEFT_ELBOW)*_frameRate;
 			velocityRightHand = skeleton.getJointDelta(Skeleton.RIGHT_HAND)*_frameRate;
 			velocityRightElbow = skeleton.getJointDelta(Skeleton.RIGHT_ELBOW)*_frameRate;
 			
-			lastDirectionOfMovementLeftHand = directionOfMovementLeftHand;
-			lastDirectionOfMovementLeftElbow = directionOfMovementLeftElbow;
-			lastDirectionOfMovementRightHand = directionOfMovementRightHand;
-			lastDirectionOfMovementRightElbow = directionOfMovementRightElbow;
-
-			if (historyLeftHandLCS.size() > 0) {
-				directionOfMovementLeftHand = PVector.sub(tempLeftHandLCS,historyLeftHandLCS.get(historyLeftHandLCS.size()-1));
-				directionOfMovementLeftElbow = PVector.sub(tempLeftElbowLCS,historyLeftElbowLCS.get(historyLeftElbowLCS.size()-1));
-				directionOfMovementRightHand = PVector.sub(tempRightHandLCS,historyRightHandLCS.get(historyRightHandLCS.size()-1));
-				directionOfMovementRightElbow = PVector.sub(tempRightElbowLCS,historyRightElbowLCS.get(historyRightElbowLCS.size()-1));
-			}
-	
-			if (PVector.angleBetween(directionOfMovementLeftHand,lastDirectionOfMovementLeftHand) < PConstants.HALF_PI) {
-				counterConstantMovementLeftHand++;
-			} else {
-				counterConstantMovementLeftHand = 0;
-			}
-			if (PVector.angleBetween(directionOfMovementLeftElbow,lastDirectionOfMovementLeftElbow) < PConstants.HALF_PI) {
-				counterConstantMovementLeftElbow++;
-			} else {
-				counterConstantMovementLeftElbow = 0;
-			}
-			if (PVector.angleBetween(directionOfMovementRightHand,lastDirectionOfMovementRightHand) < PConstants.HALF_PI) {
-				counterConstantMovementRightHand++;
-			} else {
-				counterConstantMovementRightHand = 0;
-			}
-			if (PVector.angleBetween(directionOfMovementRightElbow,lastDirectionOfMovementRightElbow) < PConstants.HALF_PI) {
-				counterConstantMovementRightElbow++;
-			} else {
-				counterConstantMovementRightElbow = 0;
-			}
-			
+			// calculation of max angles
 			float tempAngleLeftLowerArm = skeleton.getAngleLeftLowerArm();
 			float tempAngleLeftUpperArm = skeleton.getAngleLeftUpperArm();
 			float tempAngleRightLowerArm = skeleton.getAngleRightLowerArm();
 			float tempAngleRightUpperArm = skeleton.getAngleRightUpperArm();
-			if (tempAngleLeftLowerArm > maxAngleLeftLowerArm) {
-				maxAngleLeftLowerArm = tempAngleLeftLowerArm;
-			}
-			if (PConstants.PI-tempAngleLeftUpperArm > maxAngleLeftUpperArm) {
-				maxAngleLeftUpperArm = PConstants.PI-tempAngleLeftUpperArm;
-			}
-			if (tempAngleRightLowerArm > maxAngleRightLowerArm) {
-				maxAngleRightLowerArm = tempAngleRightLowerArm;
-			}
-			if (PConstants.PI-tempAngleRightUpperArm > maxAngleRightUpperArm) {
-				maxAngleRightUpperArm = PConstants.PI-tempAngleRightUpperArm;
-			}
+			if (tempAngleLeftLowerArm > maxAngleLeftLowerArm) maxAngleLeftLowerArm = tempAngleLeftLowerArm;
+			if (PConstants.PI-tempAngleLeftUpperArm > maxAngleLeftUpperArm) maxAngleLeftUpperArm = PConstants.PI-tempAngleLeftUpperArm;
+			if (tempAngleRightLowerArm > maxAngleRightLowerArm) maxAngleRightLowerArm = tempAngleRightLowerArm;
+			if (PConstants.PI-tempAngleRightUpperArm > maxAngleRightUpperArm) maxAngleRightUpperArm = PConstants.PI-tempAngleRightUpperArm;
 			
 			// calculation of orthopaedic angles for upper arm (calculation for lower arm is not possible from kinect data)
-			float tempAbduktionLShoulder = 0f;
-			float tempAbduktionRShoulder = 0f;
-			float tempAdduktionLShoulder = 0f;
-			float tempAdduktionRShoulder = 0f;
-			float tempAnteversionLShoulder = 0f;
-			float tempAnteversionRShoulder = 0f;
-			float tempRetroversionLShoulder = 0f;
-			float tempRetroversionRShoulder = 0f;
-
-			// negative y axis is needed for neutral-zero-method
-			PVector negY = new PVector();
-			negY.set(skeleton.getOrientationY());
-			negY.mult(-1f);
+			float tempAbduktionLShoulder = skeleton.getAbduction(Skeleton.LEFT_ELBOW,Skeleton.LEFT_SHOULDER);
+			float tempAbduktionRShoulder = skeleton.getAbduction(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER);
+			float tempAdduktionLShoulder = skeleton.getAdduction(Skeleton.LEFT_ELBOW,Skeleton.LEFT_SHOULDER);
+			float tempAdduktionRShoulder = skeleton.getAdduction(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER);
+			float tempAnteversionLShoulder = skeleton.getAnteversion(Skeleton.LEFT_ELBOW,Skeleton.LEFT_SHOULDER);
+			float tempAnteversionRShoulder = skeleton.getAnteversion(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER);
+			float tempRetroversionLShoulder = skeleton.getRetroversion(Skeleton.LEFT_ELBOW,Skeleton.LEFT_SHOULDER);
+			float tempRetroversionRShoulder = skeleton.getRetroversion(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER);
+			if (tempAbduktionLShoulder > maxAbduktionLShoulder) maxAbduktionLShoulder = tempAbduktionLShoulder;
+			if (tempAbduktionRShoulder > maxAbduktionRShoulder) maxAbduktionRShoulder = tempAbduktionRShoulder;
+			if (tempAdduktionLShoulder > maxAdduktionLShoulder) maxAdduktionLShoulder = tempAdduktionLShoulder;
+			if (tempAdduktionRShoulder > maxAdduktionRShoulder) maxAdduktionRShoulder = tempAdduktionRShoulder;
+			if (tempAnteversionLShoulder > maxAnteversionLShoulder) maxAnteversionLShoulder = tempAnteversionLShoulder;
+			if (tempAnteversionRShoulder > maxAnteversionRShoulder) maxAnteversionRShoulder = tempAnteversionRShoulder;
+			if (tempRetroversionLShoulder > maxRetroversionLShoulder) maxRetroversionLShoulder = tempRetroversionLShoulder;
+			if (tempRetroversionRShoulder > maxRetroversionRShoulder) maxRetroversionRShoulder = tempRetroversionRShoulder;
 			
-			if (skeleton.getOrientationInFrontalPlane(Skeleton.LEFT_ELBOW,Skeleton.LEFT_SHOULDER) == Skeleton.LEFT_LATERAL) {
-				tempAbduktionLShoulder = PVector.angleBetween(skeleton.projectionOnFrontalPlane(Skeleton.LEFT_ELBOW,Skeleton.LEFT_SHOULDER),negY);
-			} else {
-				tempAdduktionLShoulder = PVector.angleBetween(skeleton.projectionOnFrontalPlane(Skeleton.LEFT_ELBOW,Skeleton.LEFT_SHOULDER),negY);
-			}
-			if (skeleton.getOrientationInFrontalPlane(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER) == Skeleton.RIGHT_LATERAL) {
-				tempAbduktionRShoulder = PVector.angleBetween(skeleton.projectionOnFrontalPlane(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER),negY);
-			} else {
-				tempAdduktionRShoulder = PVector.angleBetween(skeleton.projectionOnFrontalPlane(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER),negY);
-			}
-			if (skeleton.getOrientationInSagittalPlane(Skeleton.LEFT_ELBOW,Skeleton.LEFT_SHOULDER) == Skeleton.ANTERIOR) {
-				tempAnteversionLShoulder = PVector.angleBetween(skeleton.projectionOnSagittalPlane(Skeleton.LEFT_ELBOW,Skeleton.LEFT_SHOULDER),negY);
-			} else {
-				tempRetroversionLShoulder = PVector.angleBetween(skeleton.projectionOnSagittalPlane(Skeleton.LEFT_ELBOW,Skeleton.LEFT_SHOULDER),negY);
-			}
-			if (skeleton.getOrientationInSagittalPlane(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER) == Skeleton.ANTERIOR) {
-				tempAnteversionRShoulder = PVector.angleBetween(skeleton.projectionOnSagittalPlane(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER),negY);
-			} else {
-				tempRetroversionRShoulder = PVector.angleBetween(skeleton.projectionOnSagittalPlane(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER),negY);
-			}
-			
-			if (tempAbduktionLShoulder > maxAbduktionLShoulder) {
-				maxAbduktionLShoulder = tempAbduktionLShoulder;
-			}
-			if (tempAbduktionRShoulder > maxAbduktionRShoulder) {
-				maxAbduktionRShoulder = tempAbduktionRShoulder;
-			}
-			if (tempAdduktionLShoulder > maxAdduktionLShoulder) {
-				maxAdduktionLShoulder = tempAdduktionLShoulder;
-			}
-			if (tempAdduktionRShoulder > maxAdduktionRShoulder) {
-				maxAdduktionRShoulder = tempAdduktionRShoulder;
-			}
-			if (tempAnteversionLShoulder > maxAnteversionLShoulder) {
-				maxAnteversionLShoulder = tempAnteversionLShoulder;
-			}
-			if (tempAnteversionRShoulder > maxAnteversionRShoulder) {
-				maxAnteversionRShoulder = tempAnteversionRShoulder;
-			}
-			if (tempRetroversionLShoulder > maxRetroversionLShoulder) {
-				maxRetroversionLShoulder = tempRetroversionLShoulder;
-			}
-			if (tempRetroversionRShoulder > maxRetroversionRShoulder) {
-				maxRetroversionRShoulder = tempRetroversionRShoulder;
-			}
-			
-			historyLeftHandLCS.add(tempLeftHandLCS);
-			historyLeftElbowLCS.add(tempLeftElbowLCS);
-			historyRightHandLCS.add(tempRightHandLCS);
-			historyRightElbowLCS.add(tempRightElbowLCS);
-			
-			lastSkeletonPosition.set(skeleton.getOrigin());
-			lastTorsoLCS.set(skeleton.getJointLCS(Skeleton.TORSO));
-			lastLeftShoulderLCS.set(skeleton.getJointLCS(Skeleton.LEFT_SHOULDER));
-			lastRightShoulderLCS.set(skeleton.getJointLCS(Skeleton.RIGHT_SHOULDER));
-			
+			// log information
 			if (buffer != null) {
 				try {
 					buffer.write(""+seconds+","+
@@ -303,7 +226,19 @@ public class SkeletonStatistics {
 								skeleton.getJointDelta(Skeleton.LEFT_HAND)+","+
 								skeleton.getJointDelta(Skeleton.LEFT_ELBOW)+","+
 								skeleton.getJointDelta(Skeleton.RIGHT_HAND)+","+
-								skeleton.getJointDelta(Skeleton.RIGHT_ELBOW)+"\n");
+								skeleton.getJointDelta(Skeleton.RIGHT_ELBOW)+","+
+								skeleton.getJointLCS(Skeleton.LEFT_HAND).x+","+
+								skeleton.getJointLCS(Skeleton.LEFT_HAND).y+","+
+								skeleton.getJointLCS(Skeleton.LEFT_HAND).z+","+
+								skeleton.getJointLCS(Skeleton.LEFT_ELBOW).x+","+
+								skeleton.getJointLCS(Skeleton.LEFT_ELBOW).y+","+
+								skeleton.getJointLCS(Skeleton.LEFT_ELBOW).z+","+
+								skeleton.getJointLCS(Skeleton.RIGHT_HAND).x+","+
+								skeleton.getJointLCS(Skeleton.RIGHT_HAND).y+","+
+								skeleton.getJointLCS(Skeleton.RIGHT_HAND).z+","+
+								skeleton.getJointLCS(Skeleton.RIGHT_ELBOW).x+","+
+								skeleton.getJointLCS(Skeleton.RIGHT_ELBOW).y+","+
+								skeleton.getJointLCS(Skeleton.RIGHT_ELBOW).z+"\n");
 					
 				} catch (Exception e) {
 					PApplet.println("couldn't write to file, buffer exception");
@@ -313,20 +248,20 @@ public class SkeletonStatistics {
 		}
 	}
 
-	public ArrayList<PVector> getHistoryLeftHandLCS() {
-		return historyLeftHandLCS;
+	public ArrayList<PVector> getHistoryLeftHand() {
+		return historyLeftHand;
 	}
 
-	public ArrayList<PVector> getHistoryLeftElbowLCS() {
-		return historyLeftElbowLCS;
+	public ArrayList<PVector> getHistoryLeftElbow() {
+		return historyLeftElbow;
 	}
 
-	public ArrayList<PVector> getHistoryRightHandLCS() {
-		return historyRightHandLCS;
+	public ArrayList<PVector> getHistoryRightHand() {
+		return historyRightHand;
 	}
 
-	public ArrayList<PVector> getHistoryRightElbowLCS() {
-		return historyRightElbowLCS;
+	public ArrayList<PVector> getHistoryRightElbow() {
+		return historyRightElbow;
 	}
 
 	public float getDistanceLeftHand() {
@@ -381,22 +316,6 @@ public class SkeletonStatistics {
 		return skeleton;
 	}
 
-	public PVector getLastSkeletonPosition() {
-		return lastSkeletonPosition;
-	}
-
-	public PVector getLastTorsoLCS() {
-		return lastTorsoLCS;
-	}
-
-	public PVector getLastLeftShoulderLCS() {
-		return lastLeftShoulderLCS;
-	}
-
-	public PVector getLastRightShoulderLCS() {
-		return lastRightShoulderLCS;
-	}
-
 	public PVector getDirectionOfMovementLeftHand() {
 		return directionOfMovementLeftHand;
 	}
@@ -411,22 +330,6 @@ public class SkeletonStatistics {
 
 	public PVector getDirectionOfMovementRightElbow() {
 		return directionOfMovementRightElbow;
-	}
-
-	public PVector getLastDirectionOfMovementLeftHand() {
-		return lastDirectionOfMovementLeftHand;
-	}
-
-	public PVector getLastDirectionOfMovementLeftElbow() {
-		return lastDirectionOfMovementLeftElbow;
-	}
-
-	public PVector getLastDirectionOfMovementRightHand() {
-		return lastDirectionOfMovementRightHand;
-	}
-
-	public PVector getLastDirectionOfMovementRightElbow() {
-		return lastDirectionOfMovementRightElbow;
 	}
 
 	public int getCounterConstantMovementLeftHand() {

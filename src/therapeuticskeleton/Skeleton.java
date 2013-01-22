@@ -490,7 +490,7 @@ public class Skeleton {
 	 *  @param joint12 the joint the limb-vector origins in
 	 *  @return the angle, float between 0 and PI */
 	public float angleToSagittalPlaneN0 (short joint11, short joint12) {
-		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
+		PVector axis1 = PVector.sub(joint[joint11],joint[joint12]);
 		return PVector.angleBetween(axis1,math.getSagittalPlane().n0);
 	}
 	/** returns the angle between the limb-vector and the normal vector of the frontal body plane
@@ -498,7 +498,7 @@ public class Skeleton {
 	 *  @param joint12 the joint the limb-vector origins in
 	 *  @return the angle, float between 0 and PI */
 	public float angleToFrontalPlaneN0 (short joint11, short joint12) {
-		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
+		PVector axis1 = PVector.sub(joint[joint11],joint[joint12]);
 		return PVector.angleBetween(axis1,math.getFrontalPlane().n0);
 	}
 	/** returns the angle between the limb-vector and the normal vector of the transversal body plane
@@ -506,7 +506,7 @@ public class Skeleton {
 	 *  @param joint12 the joint the limb-vector origins in
 	 *  @return the angle, float between 0 and PI */
 	public float angleToTransversalPlaneN0 (short joint11, short joint12) {
-		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
+		PVector axis1 = PVector.sub(joint[joint11],joint[joint12]);
 		return PVector.angleBetween(axis1,math.getTransversalPlane().n0);
 	}
 	/** The angle between the left upper Arm and the body axis. Is calculated in the local coordinate system!
@@ -574,40 +574,111 @@ public class Skeleton {
 			return NEUTRAL;
 		}
 	}
-	/** returns the projection of a limb on to the sagittal plane
+	/** returns the angle of the limb in the frontal plane to the negative y-axis: Abduction. 
+	 *  Abduction is only defined for shoulder and hip-joints!!!
 	 *  @param joint11 the joint the limb-vector points to
 	 *  @param joint12 the joint the limb-vector origins in
-	 *  @return the projective of the limb-vector in the sagittal plane */
-	public PVector projectionOnSagittalPlane (short joint11, short joint12) {
+	 *  @return the angle of the limb's abduction */
+	public float getAbduction (short joint11, short joint12) {
+		float abductionModifier = 1f;
+		// Abduction is angle of the axis-components in frontal plane to negative body axis
+		if ((joint11 == LEFT_ELBOW && joint12 == LEFT_SHOULDER) || 
+			(joint11 == LEFT_KNEE && joint12 == LEFT_HIP)) {
+			if (getOrientationInFrontalPlane(joint11,joint12) == RIGHT_LATERAL) {
+				abductionModifier *= -1f;
+			}
+		} else if ((joint11 == RIGHT_ELBOW && joint12 == RIGHT_SHOULDER) || 
+				(joint11 == RIGHT_KNEE && joint12 == RIGHT_HIP)) {
+			if (getOrientationInFrontalPlane(joint11,joint12) == LEFT_LATERAL) {
+				abductionModifier *= -1f;
+			}
+		} else {
+			return 0f;
+		}
+		
 		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
-		PVector n0 = new PVector();
-		n0.set(math.getSagittalPlane().n0);
-		n0.mult(PVector.dot(axis1,n0));
-		return PVector.sub(axis1,n0);
+		axis1.z = 0f; // use component vector of axis1 in frontal plane
+		float angle = PVector.angleBetween(axis1,new PVector(0f,-1f,0f));
+		return angle*=abductionModifier;
 	}
-	/** returns the projection of a limb on to the frontal plane
+	/** returns the angle of the limb in the frontal plane to the negative y-axis: Adduction. 
+	 *  Adduction is only defined for shoulder and hip-joints!!!
 	 *  @param joint11 the joint the limb-vector points to
 	 *  @param joint12 the joint the limb-vector origins in
-	 *  @return the projective of the limb-vector in the frontal plane */
-	public PVector projectionOnFrontalPlane (short joint11, short joint12) {
+	 *  @return the angle of the limb's adduction */
+	public float getAdduction (short joint11, short joint12) {
+		float adductionModifier = 1f;
+		// Adduction is angle of the axis-components in frontal plane to negative body axis
+		if ((joint11 == LEFT_ELBOW && joint12 == LEFT_SHOULDER) || 
+			(joint11 == LEFT_KNEE && joint12 == LEFT_HIP)) {
+			if (getOrientationInFrontalPlane(joint11,joint12) == LEFT_LATERAL) {
+				adductionModifier *= -1f;
+			}
+		} else if ((joint11 == RIGHT_ELBOW && joint12 == RIGHT_SHOULDER) || 
+				(joint11 == RIGHT_KNEE && joint12 == RIGHT_HIP)) {
+			if (getOrientationInFrontalPlane(joint11,joint12) == RIGHT_LATERAL) {
+				adductionModifier *= -1f;
+			}
+		} else {
+			return 0f;
+		}
+		
 		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
-		PVector n0 = new PVector();
-		n0.set(math.getFrontalPlane().n0);
-		n0.mult(PVector.dot(axis1,n0));
-		return PVector.sub(axis1,n0);
+		axis1.z = 0f; // use only components of axis1 in frontal plane
+		float angle = PVector.angleBetween(axis1,new PVector(0f,-1f,0f));
+		
+		return angle*=adductionModifier;
 	}
-	/** returns the projection of a limb on to the transversal plane
+	/** returns the angle of the limb in the sagittal plane to the negative y-axis: Anteversion. 
+	 *  Anteversion is only defined for shoulder and hip-joints!!!
 	 *  @param joint11 the joint the limb-vector points to
 	 *  @param joint12 the joint the limb-vector origins in
-	 *  @return the projective of the limb-vector in the transversal plane */
-	public PVector projectionOnTransversalPlane (short joint11, short joint12) {
+	 *  @return the angle of the limb's Anteversion */
+	public float getAnteversion (short joint11, short joint12) {
+		float anteversionModifier = 1f;
+		// Anteversion is angle of the axis-components in sagittal plane to negative body axis
+		if ((joint11 == LEFT_ELBOW && joint12 == LEFT_SHOULDER) || 
+			(joint11 == LEFT_KNEE && joint12 == LEFT_HIP) ||
+			(joint11 == RIGHT_ELBOW && joint12 == RIGHT_SHOULDER) || 
+			(joint11 == RIGHT_KNEE && joint12 == RIGHT_HIP)) {
+			if (getOrientationInSagittalPlane(joint11,joint12) == POSTERIOR) {
+				anteversionModifier *= -1f;
+			}
+		} else {
+			return 0f;
+		}
+		
 		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
-		PVector n0 = new PVector();
-		n0.set(math.getTransversalPlane().n0);
-		n0.mult(PVector.dot(axis1,n0));
-		return PVector.sub(axis1,n0);
+		axis1.x = 0f; // use component vector of axis1 in sagittal plane
+		float angle = PVector.angleBetween(axis1,new PVector(0f,-1f,0f));
+		
+		return angle*=anteversionModifier;
 	}
-	
+	/** returns the angle of the limb in the sagittal plane to the negative y-axis: Retroversion. 
+	 *  Retroversion is only defined for shoulder and hip-joints!!!
+	 *  @param joint11 the joint the limb-vector points to
+	 *  @param joint12 the joint the limb-vector origins in
+	 *  @return the angle of the limb's Retroversion */
+	public float getRetroversion (short joint11, short joint12) {
+		float retroversionModifier = 1f;
+		// Retroversion is angle of the axis-components in sagittal plane to negative body axis
+		if ((joint11 == LEFT_ELBOW && joint12 == LEFT_SHOULDER) || 
+			(joint11 == LEFT_KNEE && joint12 == LEFT_HIP) ||
+			(joint11 == RIGHT_ELBOW && joint12 == RIGHT_SHOULDER) || 
+			(joint11 == RIGHT_KNEE && joint12 == RIGHT_HIP)) {
+			if (getOrientationInSagittalPlane(joint11,joint12) == ANTERIOR) {
+				retroversionModifier *= -1f;
+			}
+		} else {
+			return 0f;
+		}
+		
+		PVector axis1 = PVector.sub(jointLCS[joint11],jointLCS[joint12]);
+		axis1.x = 0f; // use component vector of axis1 in sagittal plane
+		float angle = PVector.angleBetween(axis1,new PVector(0f,-1f,0f));
+		
+		return angle*=retroversionModifier;
+	}
 	
 	
 	/** All planes are defined in HNF: r*n0-d = 0. Sagittal Plane is mirror plane!
