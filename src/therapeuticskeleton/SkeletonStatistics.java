@@ -39,10 +39,10 @@ public class SkeletonStatistics {
 	private float maxAngleRightUpperArm = 0f;
 	
 	// range of movement in clinical terms
-	private float maxAbduktionLShoulder = 0f;
-	private float maxAbduktionRShoulder = 0f;
-	private float maxAdduktionLShoulder = 0f;
-	private float maxAdduktionRShoulder = 0f;
+	private float maxAbductionLShoulder = 0f;
+	private float maxAbductionRShoulder = 0f;
+	private float maxAdductionLShoulder = 0f;
+	private float maxAdductionRShoulder = 0f;
 	private float maxAnteversionLShoulder = 0f;
 	private float maxAnteversionRShoulder = 0f;
 	private float maxRetroversionLShoulder = 0f;
@@ -63,7 +63,19 @@ public class SkeletonStatistics {
 		if (buffer != null) {
 			try {
 				// write the header
-				buffer.write("Second,velocityLH,velocityLE,velocityRH,velocityRE,deltaLH,deltaLE,deltaRH,deltaRE,xLH,yLH,zLH,xLE,yLE,zLE,xRH,yRH,zRH,xRE,yRE,zRE\n");				
+				buffer.write("Second," +
+						"velocityLH," +
+						"velocityLE," +
+						"velocityRH," +
+						"velocityRE," +
+						"deltaLH," +
+						"deltaLE," +
+						"deltaRH," +
+						"deltaRE," +
+						"xLH,yLH,zLH," +
+						"xLE,yLE,zLE," +
+						"xRH,yRH,zRH," +
+						"xRE,yRE,zRE\n");				
 			} catch (Exception e) {
 				PApplet.println("couldn't write to file, buffer exception");
 			}
@@ -74,7 +86,23 @@ public class SkeletonStatistics {
 		if (buffer != null) {
 			try {
 				// write the footer
-				buffer.write("\ntime,distanceLH,distanceLE,distanceRH,distanceRE,maxAngleLeftLowerArm,maxAngleLeftUpperArm,maxAngleRightLowerArm,maxAngleRightUpperArm\n");
+				buffer.write("\ntime," +
+						"distanceLH," +
+						"distanceLE," +
+						"distanceRH," +
+						"distanceRE," +
+						"maxAngleLeftLowerArm," +
+						"maxAngleLeftUpperArm," +
+						"maxAngleRightLowerArm," +
+						"maxAngleRightUpperArm," +
+						"maxAbductionLS," +
+						"maxAdductionLS," +
+						"maxAnteversionLS," +
+						"maxRetroversionLS," +
+						"maxAbductionRS," +
+						"maxAdductionRS," +
+						"maxAnteversionRS," +
+						"maxRetroversionRS\n");
 				buffer.write(""+seconds+","+
 						distanceLeftHand+","+
 						distanceLeftElbow+","+
@@ -83,7 +111,15 @@ public class SkeletonStatistics {
 						PApplet.degrees(maxAngleLeftLowerArm)+","+
 						PApplet.degrees(maxAngleLeftUpperArm)+","+
 						PApplet.degrees(maxAngleRightLowerArm)+","+
-						PApplet.degrees(maxAngleRightUpperArm));
+						PApplet.degrees(maxAngleRightUpperArm)+","+
+						PApplet.degrees(maxAbductionLShoulder)+","+
+						PApplet.degrees(maxAdductionLShoulder)+","+
+						PApplet.degrees(maxAnteversionLShoulder)+","+
+						PApplet.degrees(maxRetroversionLShoulder)+","+
+						PApplet.degrees(maxAbductionRShoulder)+","+
+						PApplet.degrees(maxAdductionRShoulder)+","+
+						PApplet.degrees(maxAnteversionRShoulder)+","+
+						PApplet.degrees(maxRetroversionRShoulder));
 			} catch (Exception e) {
 				PApplet.println("couldn't write to file, buffer exception");
 			}
@@ -123,10 +159,10 @@ public class SkeletonStatistics {
 		maxAngleRightLowerArm = _statistics.getMaxAngleRightLowerArm();
 		maxAngleRightUpperArm = _statistics.getMaxAngleRightUpperArm();
 
-		maxAbduktionLShoulder = _statistics.getMaxAbduktionLShoulder();
-		maxAbduktionRShoulder = _statistics.getMaxAbduktionRShoulder();
-		maxAdduktionLShoulder = _statistics.getMaxAdduktionLShoulder();
-		maxAdduktionRShoulder = _statistics.getMaxAdduktionRShoulder();
+		maxAbductionLShoulder = _statistics.getMaxAbductionLShoulder();
+		maxAbductionRShoulder = _statistics.getMaxAbductionRShoulder();
+		maxAdductionLShoulder = _statistics.getMaxAdductionLShoulder();
+		maxAdductionRShoulder = _statistics.getMaxAdductionRShoulder();
 		maxAnteversionLShoulder = _statistics.getMaxAnteversionLShoulder();
 		maxAnteversionRShoulder = _statistics.getMaxAnteversionRShoulder();
 		maxRetroversionLShoulder = _statistics.getMaxRetroversionLShoulder();
@@ -206,10 +242,10 @@ public class SkeletonStatistics {
 			float tempAnteversionRShoulder = skeleton.getAnteversion(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER);
 			float tempRetroversionLShoulder = skeleton.getRetroversion(Skeleton.LEFT_ELBOW,Skeleton.LEFT_SHOULDER);
 			float tempRetroversionRShoulder = skeleton.getRetroversion(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER);
-			if (tempAbduktionLShoulder > maxAbduktionLShoulder) maxAbduktionLShoulder = tempAbduktionLShoulder;
-			if (tempAbduktionRShoulder > maxAbduktionRShoulder) maxAbduktionRShoulder = tempAbduktionRShoulder;
-			if (tempAdduktionLShoulder > maxAdduktionLShoulder) maxAdduktionLShoulder = tempAdduktionLShoulder;
-			if (tempAdduktionRShoulder > maxAdduktionRShoulder) maxAdduktionRShoulder = tempAdduktionRShoulder;
+			if (tempAbduktionLShoulder > maxAbductionLShoulder) maxAbductionLShoulder = tempAbduktionLShoulder;
+			if (tempAbduktionRShoulder > maxAbductionRShoulder) maxAbductionRShoulder = tempAbduktionRShoulder;
+			if (tempAdduktionLShoulder > maxAdductionLShoulder) maxAdductionLShoulder = tempAdduktionLShoulder;
+			if (tempAdduktionRShoulder > maxAdductionRShoulder) maxAdductionRShoulder = tempAdduktionRShoulder;
 			if (tempAnteversionLShoulder > maxAnteversionLShoulder) maxAnteversionLShoulder = tempAnteversionLShoulder;
 			if (tempAnteversionRShoulder > maxAnteversionRShoulder) maxAnteversionRShoulder = tempAnteversionRShoulder;
 			if (tempRetroversionLShoulder > maxRetroversionLShoulder) maxRetroversionLShoulder = tempRetroversionLShoulder;
@@ -348,20 +384,20 @@ public class SkeletonStatistics {
 		return counterConstantMovementRightElbow;
 	}
 
-	public float getMaxAbduktionLShoulder() {
-		return maxAbduktionLShoulder;
+	public float getMaxAbductionLShoulder() {
+		return maxAbductionLShoulder;
 	}
 
-	public float getMaxAbduktionRShoulder() {
-		return maxAbduktionRShoulder;
+	public float getMaxAbductionRShoulder() {
+		return maxAbductionRShoulder;
 	}
 
-	public float getMaxAdduktionLShoulder() {
-		return maxAdduktionLShoulder;
+	public float getMaxAdductionLShoulder() {
+		return maxAdductionLShoulder;
 	}
 
-	public float getMaxAdduktionRShoulder() {
-		return maxAdduktionRShoulder;
+	public float getMaxAdductionRShoulder() {
+		return maxAdductionRShoulder;
 	}
 
 	public float getMaxAnteversionLShoulder() {
