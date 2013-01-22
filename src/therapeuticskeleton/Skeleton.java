@@ -310,32 +310,26 @@ public class Skeleton {
 	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
 	 *  @return The position of a certain joint in the global coordinate system as vector. If jointType out of range: 0-vector */
 	public PVector getJoint (short jointType) {
-		if (jointType >= 0 && jointType <= 14) 
-			return joint[jointType];
-		else
-			return new PVector();
+		PVector returnValue = new PVector();
+		if (jointType >= 0 && jointType <= 14) returnValue.set(joint[jointType]);
+		return returnValue;
 	}
 	/** This method returns the joint position of a certain joint on the kinect's projective plane. Z-value will be 0
 	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
 	 *  @return The position of a certain joint as vector on the projective plane of the kinect. If jointType out of range: 0-vector */
 	public PVector getJointProjective (short jointType) {
-		if (jointType >= 0 && jointType <= 14) {
-			PVector projective = new PVector();
-			kinect.convertRealWorldToProjective(joint[jointType], projective);
-			return projective;
-		} else {
-			return new PVector();
-		}
+		PVector projective = new PVector();
+		if (jointType >= 0 && jointType <= 14) kinect.convertRealWorldToProjective(joint[jointType], projective);
+		return projective;
 	}
 	/** The positions of the joints are transformed to the local coordinate system of the skeleton if calculateLocalCoordSys was set.
 	 *  This method returns the joint position of a certain joint in the local coordinate system. Works only if localCoordSysCalculated is true.
 	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
 	 *  @return The position of a certain joint in the local coordinate system as vector. If jointType out of range or if localCoordSys was not calculated: 0-vector */
 	public PVector getJointLCS (short jointType) {
-		if (jointType >= 0 && jointType <= 14) 
-			return jointLCS[jointType];
-		else
-			return new PVector();
+		PVector returnValue = new PVector();
+		if (jointType >= 0 && jointType <= 14) returnValue.set(jointLCS[jointType]);
+		return returnValue;
 	}
 	/** The positions of the joints are evaluated with a certain confidence value. This method returns the confidence value for a certain joint
 	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
@@ -350,10 +344,9 @@ public class Skeleton {
 	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
 	 *  @return The orientation matrix of a certain joint. PMatrix3D. If jointType out of range: 0-Matrix */
 	public PMatrix3D getJointOrientation (short jointType) {
-		if (jointType >= 0 && jointType <= 14) 
-			return jointOrientation[jointType];
-		else
-			return new PMatrix3D();
+		PMatrix3D returnValue = new PMatrix3D();
+		if (jointType >= 0 && jointType <= 14) returnValue.set(jointOrientation[jointType]);
+		return returnValue;
 	}
 	/** The orientations of the joints are evaluated with a certain confidence value. This method returns the confidence value 
 	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
@@ -385,42 +378,58 @@ public class Skeleton {
 	/** The vectors for lower and upper arms are calculated for convenience. 
 	 *  @return The vector for the left upper arm */
 	public PVector getLeftUpperArm() {
-		return lUpperArm;
+		PVector returnValue = new PVector();
+		returnValue.set(lUpperArm);
+		return returnValue;
 	}
 	/** The vectors for lower and upper arms are calculated for convenience. 
 	 *  @return The vector for the left lower arm */
 	public PVector getLeftLowerArm() {
-		return lLowerArm;
+		PVector returnValue = new PVector();
+		returnValue.set(lLowerArm);
+		return returnValue;
 	}
 	/** The vectors for lower and upper arms are calculated for convenience. 
 	 *  @return The vector for the right upper arm */
 	public PVector getRightUpperArm() {
-		return rUpperArm;
+		PVector returnValue = new PVector();
+		returnValue.set(rUpperArm);
+		return returnValue;
 	}
 	/** The vectors for lower and upper arms are calculated for convenience. 
 	 *  @return The vector for the right lower arm */
 	public PVector getRightLowerArm() {
-		return rLowerArm;
+		PVector returnValue = new PVector();
+		returnValue.set(rLowerArm);
+		return returnValue;
 	}
 	/** The vectors for the lower and upper arms are calculated for convenience.
 	 *  @return The vector for the left upper arm in the local coordinate system.*/
 	public PVector getLeftUpperArmLCS() {
-		return lUpperArmLCS;
+		PVector returnValue = new PVector();
+		returnValue.set(lUpperArmLCS);
+		return returnValue;
 	}
 	/** The vectors for the lower and upper arms are calculated for convenience. 
 	 *  @return The vector for the left lower arm in the local coordinate system.  */
 	public PVector getRightUpperArmLCS() {
-		return rUpperArmLCS;
+		PVector returnValue = new PVector();
+		returnValue.set(rUpperArmLCS);
+		return returnValue;
 	}
 	/** The vectors for the lower and upper arms are calculated for convenience. 
 	 *  @return The vector for the right upper arm in the local coordinate system.  */
 	public PVector getLeftLowerArmLCS() {
-		return lLowerArmLCS;
+		PVector returnValue = new PVector();
+		returnValue.set(lLowerArmLCS);
+		return returnValue;
 	}
 	/** The vectors for the lower and upper arms are calculated for convenience. 
 	 *  @return The vector for the right lower arm in the local coordinate system.  */
 	public PVector getRightLowerArmLCS() {
-		return rLowerArmLCS;
+		PVector returnValue = new PVector();
+		returnValue.set(rLowerArmLCS);
+		return returnValue;
 	}
 	
 	
@@ -684,57 +693,73 @@ public class Skeleton {
 	/** All planes are defined in HNF: r*n0-d = 0. Sagittal Plane is mirror plane!
 	 *  @return the r vector of the sagittal body plane. */
 	public PVector getRVectorSagittalPlane () {
-			return math.getSagittalPlane().r;
+		PVector returnValue = new PVector();
+		returnValue.set(math.getSagittalPlane().r);
+		return returnValue;
 	}
 	/** All planes are defined in HNF: r*n0-d = 0. Sagittal Plane is mirror plane!
 	 *  @return the n0 vector of the sagittal body plane. */
 	public PVector getN0VectorSagittalPlane () {
-			return math.getSagittalPlane().n0;
+		PVector returnValue = new PVector();
+		returnValue.set(math.getSagittalPlane().n0);
+		return returnValue;
 	}
 	/** All planes are defined in HNF: r*n0-d = 0. Sagittal Plane is mirror plane!
 	 *  @return the d value of the sagittal body plane. */
 	public float getDValueSagittalPlane () {
-			return math.getSagittalPlane().d;
+		return math.getSagittalPlane().d;
 	}
 	/** All planes are defined in HNF: r*n0-d = 0.
 	 *  @return the r vector of the frontal body plane. */
 	public PVector getRVectorFrontalPlane () {
-			return math.getFrontalPlane().r;
+		PVector returnValue = new PVector();
+		returnValue.set(math.getFrontalPlane().r);
+		return returnValue;
 	}
 	/** All planes are defined in HNF: r*n0-d = 0.
 	 *  @return the n0 vector of the frontal body plane. */
 	public PVector getN0VectorFrontalPlane () {
-			return math.getFrontalPlane().n0;
+		PVector returnValue = new PVector();
+		returnValue.set(math.getFrontalPlane().n0);
+		return returnValue;
 	}
 	/** All planes are defined in HNF: r*n0-d = 0.
 	 *  @return the d value of the frontal body plane. */
 	public float getDValueFrontalPlane () {
-			return math.getFrontalPlane().d;
+		return math.getFrontalPlane().d;
 	}
 	/** All planes are defined in HNF: r*n0-d = 0.
 	 *  @return the r vector of the transversal body plane. */
 	public PVector getRVectorTransversalPlane () {
-			return math.getTransversalPlane().r;
+		PVector returnValue = new PVector();
+		returnValue.set(math.getTransversalPlane().r);
+		return returnValue;
 	}
 	/** All planes are defined in HNF: r*n0-d = 0.
 	 *  @return the n0 vector of the transversal body plane. */
 	public PVector getN0VectorTransversalPlane () {
-			return math.getTransversalPlane().n0;
+		PVector returnValue = new PVector();
+		returnValue.set(math.getTransversalPlane().n0);
+		return returnValue;
 	}
 	/** All planes are defined in HNF: r*n0-d = 0.
 	 *  @return the d value of the transversal body plane. */
 	public float getDValueTransversalPlane () {
-			return math.getTransversalPlane().d;
+		return math.getTransversalPlane().d;
 	}
 	/** returns the origin of the local coordsys. Equals Torso Vector.
 	 *  @return the origin of the skeletons local coordinate system. */
 	public PVector getOrigin () {
-		return math.getOrigin();
+		PVector returnValue = new PVector();
+		returnValue.set(math.getOrigin());
+		return returnValue;
 	}
 	/** returns the local x coordinate vector.
 	 *  @return the local x vector.*/
 	public PVector getOrientationX () {
-		return math.getOrientationX();
+		PVector returnValue = new PVector();
+		returnValue.set(math.getOrientationX());
+		return returnValue;
 	}
 	/** returns the local x coordinate vector projected to the kinects projection plane.
 	 *  @return the local vector projected to the kinects projection plane. */
@@ -751,7 +776,9 @@ public class Skeleton {
 	/** returns the local y coordinate vector.
 	 *  @return the local y vector. */
 	public PVector getOrientationY () {
-		return math.getOrientationY();
+		PVector returnValue = new PVector();
+		returnValue.set(math.getOrientationY());
+		return returnValue;
 	}
 	/** returns the local y coordinate vector projected to the kinects projection plane.
 	 *  @return the local vector projected to the kinects projection plane. */
@@ -768,7 +795,9 @@ public class Skeleton {
 	/** returns the local z coordinate vector.
 	 *  @return the local z vector.*/
 	public PVector getOrientationZ () {
-		return math.getOrientationZ();
+		PVector returnValue = new PVector();
+		returnValue.set(math.getOrientationZ());
+		return returnValue;
 	}
 	/** returns the local z coordinate vector projected to the kinects projection plane.
 	 *  @return the local vector projected to the kinects projection plane.*/
