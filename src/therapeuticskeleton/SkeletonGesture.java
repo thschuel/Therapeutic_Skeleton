@@ -28,7 +28,7 @@ public class SkeletonGesture {
 	
 
 	/** Setter for the tolerance with which gesture will be detected. 0..1f.
-	 *  @param the tolerance between 0..1f. when higher than 1 or lower than 0, default tolerance 0.5f will be set */
+	 *  @param _gestureTolerance the tolerance between 0..1f. when higher than 1 or lower than 0, default tolerance 0.5f will be set */
 	public void setGestureTolerance (float _gestureTolerance) {
 		if (_gestureTolerance >= 0f && _gestureTolerance <= 1f) {
 			gestureTolerance = _gestureTolerance;
@@ -57,7 +57,7 @@ public class SkeletonGesture {
 	}
 	
 	/** Evaluate gestures and store results internally. Access recognized gestures using getter-methods. 
-	 *  @param _updateCycle The current update cycle of the main applet. Is used to evaluate time critical gestures. 
+	 *  @param _frameCount The current update cycle of the main applet. Is used to evaluate time critical gestures. 
 	 * */
 	public void evaluate (int _frameCount) {
 		if (evaluatePushGesture(_frameCount)) {

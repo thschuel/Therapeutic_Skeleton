@@ -136,10 +136,7 @@ public class Skeleton {
 	/** Constructor for the Skeleton.
 	 *  @param _kinect Handle to the SimpleOpenNI object. Skeleton will maintain its status in the update method by talking to SimpleOpenNI directly.
 	 *  @param _userId the user ID of the skeleton
-	 *  @param _fullBodyTracking switches full body tracking on/off. If switched off, only upper body joints will be evaluated
-	 *  @param _calculateLocalCoordSys switches calculation of the local coordinate system on/off. If switched on, local coordination system will be calculated and joints will be transformed to it 
-	 *  @param _evaluatePostureAndGesture switches calculation of the posture and gesture on/off. Switching it on requires local coord sys to be calculated 
-	 *  @param _mirrorTherapy Sets the skeleton to mirror one body side to the other. When mirrorTherapy is set on, mirrorPlane will be calculated. Short value should correspond to skeleton constants. If out of range, mirror therapy will be switched off */
+	 *  @param _fullBodyTracking switches full body tracking on/off. If switched off, only upper body joints will be evaluated */
 	public Skeleton (SimpleOpenNI _kinect, int _userId, boolean _fullBodyTracking) {
 		kinect = _kinect;
 		userId = _userId;
@@ -271,7 +268,7 @@ public class Skeleton {
 		return userId;
 	}
 	/** Setter for the tolerance with which gesture will be detected. 0..1f.
-	 *  @param the tolerance between 0..1f. when higher than 1 or lower than 0, default tolerance 0.5f will be set */
+	 *  @param _gestureTolerance the tolerance between 0..1f. when higher than 1 or lower than 0, default tolerance 0.5f will be set */
 	public void setGestureTolerance (float _gestureTolerance) {
 		if (gesture != null) {
 			gesture.setGestureTolerance(_gestureTolerance);
@@ -287,7 +284,7 @@ public class Skeleton {
 		}
 	}
 	/** Setter for the tolerance with which posture will be detected. 0..1f.
-	 *  @param the tolerance between 0..1f. when higher than 1 or lower than 0, default tolerance 0.3f will be set */
+	 *  @param _postureTolerance the tolerance between 0..1f. when higher than 1 or lower than 0, default tolerance 0.3f will be set */
 	public void setPostureTolerance (float _postureTolerance) {
 		if (posture != null){
 			posture.setPostureTolerance(_postureTolerance);

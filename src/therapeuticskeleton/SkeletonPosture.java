@@ -85,7 +85,7 @@ public class SkeletonPosture {
 	}
 
 	/** Setter for the tolerance with which posture will be detected. 0..1f.
-	 *  @param the tolerance between 0..1f. when higher than 1 or lower than 0, default tolerance 0.3f will be set */
+	 *  @param _postureTolerance the tolerance between 0..1f. when higher than 1 or lower than 0, default tolerance 0.3f will be set */
 	public void setPostureTolerance (float _postureTolerance) {
 		if (_postureTolerance >= 0f && _postureTolerance <= 1f) {
 			postureTolerance = _postureTolerance;
