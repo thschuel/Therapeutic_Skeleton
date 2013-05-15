@@ -42,24 +42,6 @@ public class SkeletonStatistics {
 	private float maxAngleRightLowerArm = 0f;
 	private float maxAngleRightUpperArm = 0f;
 	
-	// range of movement in clinical terms
-	private float abductionLShoulder = 0f;
-	private float abductionRShoulder = 0f;
-	private float adductionLShoulder = 0f;
-	private float adductionRShoulder = 0f;
-	private float anteversionLShoulder = 0f;
-	private float anteversionRShoulder = 0f;
-	private float retroversionLShoulder = 0f;
-	private float retroversionRShoulder = 0f;
-	private float maxAbductionLShoulder = 0f;
-	private float maxAbductionRShoulder = 0f;
-	private float maxAdductionLShoulder = 0f;
-	private float maxAdductionRShoulder = 0f;
-	private float maxAnteversionLShoulder = 0f;
-	private float maxAnteversionRShoulder = 0f;
-	private float maxRetroversionLShoulder = 0f;
-	private float maxRetroversionRShoulder = 0f;
-	
 	// internal variables
 	private Skeleton skeleton = null;
 	private BufferedWriter buffer = null;
@@ -106,15 +88,7 @@ public class SkeletonStatistics {
 						"maxAngleLeftLowerArm," +
 						"maxAngleLeftUpperArm," +
 						"maxAngleRightLowerArm," +
-						"maxAngleRightUpperArm," +
-						"maxAbductionLS," +
-						"maxAdductionLS," +
-						"maxAnteversionLS," +
-						"maxRetroversionLS," +
-						"maxAbductionRS," +
-						"maxAdductionRS," +
-						"maxAnteversionRS," +
-						"maxRetroversionRS\n");
+						"maxAngleRightUpperArm\n");
 				buffer.write(""+seconds+","+
 						distanceLeftHand+","+
 						distanceLeftElbow+","+
@@ -123,15 +97,7 @@ public class SkeletonStatistics {
 						PApplet.degrees(maxAngleLeftLowerArm)+","+
 						PApplet.degrees(maxAngleLeftUpperArm)+","+
 						PApplet.degrees(maxAngleRightLowerArm)+","+
-						PApplet.degrees(maxAngleRightUpperArm)+","+
-						PApplet.degrees(maxAbductionLShoulder)+","+
-						PApplet.degrees(maxAdductionLShoulder)+","+
-						PApplet.degrees(maxAnteversionLShoulder)+","+
-						PApplet.degrees(maxRetroversionLShoulder)+","+
-						PApplet.degrees(maxAbductionRShoulder)+","+
-						PApplet.degrees(maxAdductionRShoulder)+","+
-						PApplet.degrees(maxAnteversionRShoulder)+","+
-						PApplet.degrees(maxRetroversionRShoulder));
+						PApplet.degrees(maxAngleRightUpperArm));
 			} catch (Exception e) {
 				PApplet.println("couldn't write to file, buffer exception");
 			}
@@ -175,24 +141,6 @@ public class SkeletonStatistics {
 		maxAngleLeftUpperArm = _statistics.getMaxAngleLeftUpperArm();
 		maxAngleRightLowerArm = _statistics.getMaxAngleRightLowerArm();
 		maxAngleRightUpperArm = _statistics.getMaxAngleRightUpperArm();
-		
-		abductionLShoulder = _statistics.getAbductionLShoulder();
-		abductionRShoulder = _statistics.getAbductionRShoulder();
-		adductionLShoulder = _statistics.getAdductionLShoulder();
-		adductionRShoulder = _statistics.getAdductionRShoulder();
-		anteversionLShoulder = _statistics.getAnteversionLShoulder();
-		anteversionRShoulder = _statistics.getAnteversionRShoulder();
-		retroversionLShoulder = _statistics.getRetroversionLShoulder();
-		retroversionRShoulder = _statistics.getRetroversionRShoulder();
-
-		maxAbductionLShoulder = _statistics.getMaxAbductionLShoulder();
-		maxAbductionRShoulder = _statistics.getMaxAbductionRShoulder();
-		maxAdductionLShoulder = _statistics.getMaxAdductionLShoulder();
-		maxAdductionRShoulder = _statistics.getMaxAdductionRShoulder();
-		maxAnteversionLShoulder = _statistics.getMaxAnteversionLShoulder();
-		maxAnteversionRShoulder = _statistics.getMaxAnteversionRShoulder();
-		maxRetroversionLShoulder = _statistics.getMaxRetroversionLShoulder();
-		maxRetroversionRShoulder = _statistics.getMaxRetroversionRShoulder();
 	}
 	
 	public void update (int _frameCount, float _frameRate) {
@@ -203,13 +151,13 @@ public class SkeletonStatistics {
 		if (skeleton != null) {
 			// copy joint information to new pvector to store in history
 			PVector tempLeftHand = new PVector();
-			tempLeftHand.set(skeleton.getJoint(Skeleton.LEFT_HAND));
+			tempLeftHand.set(skeleton.getJointUnmirrored(Skeleton.LEFT_HAND));
 			PVector tempLeftElbow = new PVector();
-			tempLeftElbow.set(skeleton.getJoint(Skeleton.LEFT_ELBOW));
+			tempLeftElbow.set(skeleton.getJointUnmirrored(Skeleton.LEFT_ELBOW));
 			PVector tempRightHand = new PVector();
-			tempRightHand.set(skeleton.getJoint(Skeleton.RIGHT_HAND));
+			tempRightHand.set(skeleton.getJointUnmirrored(Skeleton.RIGHT_HAND));
 			PVector tempRightElbow = new PVector();
-			tempRightElbow.set(skeleton.getJoint(Skeleton.RIGHT_ELBOW));
+			tempRightElbow.set(skeleton.getJointUnmirrored(Skeleton.RIGHT_ELBOW));
 			
 			// calculation of constant movement indicators
 			if (historyLeftHand.size() > 0) {
@@ -238,44 +186,27 @@ public class SkeletonStatistics {
 			historyRightElbow.add(tempRightElbow);
 
 			// accumulation of distance of joints 
-			distanceLeftHand += skeleton.getJointDelta(Skeleton.LEFT_HAND);
-			distanceLeftElbow += skeleton.getJointDelta(Skeleton.LEFT_ELBOW);
-			distanceRightHand += skeleton.getJointDelta(Skeleton.RIGHT_HAND);
-			distanceRightElbow += skeleton.getJointDelta(Skeleton.RIGHT_ELBOW);
+			distanceLeftHand += skeleton.getJointDeltaUnmirrored(Skeleton.LEFT_HAND);
+			distanceLeftElbow += skeleton.getJointDeltaUnmirrored(Skeleton.LEFT_ELBOW);
+			distanceRightHand += skeleton.getJointDeltaUnmirrored(Skeleton.RIGHT_HAND);
+			distanceRightElbow += skeleton.getJointDeltaUnmirrored(Skeleton.RIGHT_ELBOW);
 			
 			// calculation of velocity of joints in mm/second
-			velocityLeftHand = skeleton.getJointDelta(Skeleton.LEFT_HAND)*_frameRate;
-			velocityLeftElbow = skeleton.getJointDelta(Skeleton.LEFT_ELBOW)*_frameRate;
-			velocityRightHand = skeleton.getJointDelta(Skeleton.RIGHT_HAND)*_frameRate;
-			velocityRightElbow = skeleton.getJointDelta(Skeleton.RIGHT_ELBOW)*_frameRate;
+			velocityLeftHand = skeleton.getJointDeltaUnmirrored(Skeleton.LEFT_HAND)*_frameRate;
+			velocityLeftElbow = skeleton.getJointDeltaUnmirrored(Skeleton.LEFT_ELBOW)*_frameRate;
+			velocityRightHand = skeleton.getJointDeltaUnmirrored(Skeleton.RIGHT_HAND)*_frameRate;
+			velocityRightElbow = skeleton.getJointDeltaUnmirrored(Skeleton.RIGHT_ELBOW)*_frameRate;
 			
 			// calculation of max angles
-			angleLeftLowerArm = skeleton.getAngleLeftLowerArm();
-			angleLeftUpperArm = skeleton.getAngleLeftUpperArm();
-			angleRightLowerArm = skeleton.getAngleRightLowerArm();
-			angleRightUpperArm = skeleton.getAngleRightUpperArm();
+			angleLeftLowerArm = skeleton.getAngleLeftLowerArmUnmirrored();
+			angleLeftUpperArm = skeleton.getAngleLeftUpperArmUnmirrored();
+			angleRightLowerArm = skeleton.getAngleRightLowerArmUnmirrored();
+			angleRightUpperArm = skeleton.getAngleRightUpperArmUnmirrored();
 			if (angleLeftLowerArm > maxAngleLeftLowerArm) maxAngleLeftLowerArm = angleLeftLowerArm;
 			if (PConstants.PI-angleLeftUpperArm > maxAngleLeftUpperArm) maxAngleLeftUpperArm = PConstants.PI-angleLeftUpperArm;
 			if (angleRightLowerArm > maxAngleRightLowerArm) maxAngleRightLowerArm = angleRightLowerArm;
 			if (PConstants.PI-angleRightUpperArm > maxAngleRightUpperArm) maxAngleRightUpperArm = PConstants.PI-angleRightUpperArm;
 			
-			// calculation of orthopaedic angles for upper arm (calculation for lower arm is not possible from kinect data)
-			abductionLShoulder = skeleton.getAbduction(Skeleton.LEFT_ELBOW,Skeleton.LEFT_SHOULDER);
-			abductionRShoulder = skeleton.getAbduction(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER);
-			adductionLShoulder = skeleton.getAdduction(Skeleton.LEFT_ELBOW,Skeleton.LEFT_SHOULDER);
-			adductionRShoulder = skeleton.getAdduction(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER);
-			anteversionLShoulder = skeleton.getAnteversion(Skeleton.LEFT_ELBOW,Skeleton.LEFT_SHOULDER);
-			anteversionRShoulder = skeleton.getAnteversion(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER);
-			retroversionLShoulder = skeleton.getRetroversion(Skeleton.LEFT_ELBOW,Skeleton.LEFT_SHOULDER);
-			retroversionRShoulder = skeleton.getRetroversion(Skeleton.RIGHT_ELBOW,Skeleton.RIGHT_SHOULDER);
-			if (abductionLShoulder > maxAbductionLShoulder) maxAbductionLShoulder = abductionLShoulder;
-			if (abductionRShoulder > maxAbductionRShoulder) maxAbductionRShoulder = abductionRShoulder;
-			if (adductionLShoulder > maxAdductionLShoulder) maxAdductionLShoulder = adductionLShoulder;
-			if (adductionRShoulder > maxAdductionRShoulder) maxAdductionRShoulder = adductionRShoulder;
-			if (anteversionLShoulder > maxAnteversionLShoulder) maxAnteversionLShoulder = anteversionLShoulder;
-			if (anteversionRShoulder > maxAnteversionRShoulder) maxAnteversionRShoulder = anteversionRShoulder;
-			if (retroversionLShoulder > maxRetroversionLShoulder) maxRetroversionLShoulder = retroversionLShoulder;
-			if (retroversionRShoulder > maxRetroversionRShoulder) maxRetroversionRShoulder = retroversionRShoulder;
 			
 			// log information
 			if (buffer != null) {
@@ -285,22 +216,22 @@ public class SkeletonStatistics {
 								velocityLeftElbow+","+
 								velocityRightHand+","+
 								velocityRightElbow+","+
-								skeleton.getJointDelta(Skeleton.LEFT_HAND)+","+
-								skeleton.getJointDelta(Skeleton.LEFT_ELBOW)+","+
-								skeleton.getJointDelta(Skeleton.RIGHT_HAND)+","+
-								skeleton.getJointDelta(Skeleton.RIGHT_ELBOW)+","+
-								skeleton.getJointLCS(Skeleton.LEFT_HAND).x+","+
-								skeleton.getJointLCS(Skeleton.LEFT_HAND).y+","+
-								skeleton.getJointLCS(Skeleton.LEFT_HAND).z+","+
-								skeleton.getJointLCS(Skeleton.LEFT_ELBOW).x+","+
-								skeleton.getJointLCS(Skeleton.LEFT_ELBOW).y+","+
-								skeleton.getJointLCS(Skeleton.LEFT_ELBOW).z+","+
-								skeleton.getJointLCS(Skeleton.RIGHT_HAND).x+","+
-								skeleton.getJointLCS(Skeleton.RIGHT_HAND).y+","+
-								skeleton.getJointLCS(Skeleton.RIGHT_HAND).z+","+
-								skeleton.getJointLCS(Skeleton.RIGHT_ELBOW).x+","+
-								skeleton.getJointLCS(Skeleton.RIGHT_ELBOW).y+","+
-								skeleton.getJointLCS(Skeleton.RIGHT_ELBOW).z+"\n");
+								skeleton.getJointDeltaUnmirrored(Skeleton.LEFT_HAND)+","+
+								skeleton.getJointDeltaUnmirrored(Skeleton.LEFT_ELBOW)+","+
+								skeleton.getJointDeltaUnmirrored(Skeleton.RIGHT_HAND)+","+
+								skeleton.getJointDeltaUnmirrored(Skeleton.RIGHT_ELBOW)+","+
+								skeleton.getJointLCSUnmirrored(Skeleton.LEFT_HAND).x+","+
+								skeleton.getJointLCSUnmirrored(Skeleton.LEFT_HAND).y+","+
+								skeleton.getJointLCSUnmirrored(Skeleton.LEFT_HAND).z+","+
+								skeleton.getJointLCSUnmirrored(Skeleton.LEFT_ELBOW).x+","+
+								skeleton.getJointLCSUnmirrored(Skeleton.LEFT_ELBOW).y+","+
+								skeleton.getJointLCSUnmirrored(Skeleton.LEFT_ELBOW).z+","+
+								skeleton.getJointLCSUnmirrored(Skeleton.RIGHT_HAND).x+","+
+								skeleton.getJointLCSUnmirrored(Skeleton.RIGHT_HAND).y+","+
+								skeleton.getJointLCSUnmirrored(Skeleton.RIGHT_HAND).z+","+
+								skeleton.getJointLCSUnmirrored(Skeleton.RIGHT_ELBOW).x+","+
+								skeleton.getJointLCSUnmirrored(Skeleton.RIGHT_ELBOW).y+","+
+								skeleton.getJointLCSUnmirrored(Skeleton.RIGHT_ELBOW).z+"\n");
 					
 				} catch (Exception e) {
 					PApplet.println("couldn't write to file, buffer exception");
@@ -394,38 +325,6 @@ public class SkeletonStatistics {
 		return counterConstantMovementRightElbow;
 	}
 
-	public float getMaxAbductionLShoulder() {
-		return maxAbductionLShoulder;
-	}
-
-	public float getMaxAbductionRShoulder() {
-		return maxAbductionRShoulder;
-	}
-
-	public float getMaxAdductionLShoulder() {
-		return maxAdductionLShoulder;
-	}
-
-	public float getMaxAdductionRShoulder() {
-		return maxAdductionRShoulder;
-	}
-
-	public float getMaxAnteversionLShoulder() {
-		return maxAnteversionLShoulder;
-	}
-
-	public float getMaxAnteversionRShoulder() {
-		return maxAnteversionRShoulder;
-	}
-
-	public float getMaxRetroversionLShoulder() {
-		return maxRetroversionLShoulder;
-	}
-
-	public float getMaxRetroversionRShoulder() {
-		return maxRetroversionRShoulder;
-	}
-
 	public float getVelocityLeftHand() {
 		return velocityLeftHand;
 	}
@@ -440,38 +339,6 @@ public class SkeletonStatistics {
 
 	public float getVelocityRightElbow() {
 		return velocityRightElbow;
-	}
-
-	public float getAbductionLShoulder() {
-		return abductionLShoulder;
-	}
-
-	public float getAbductionRShoulder() {
-		return abductionRShoulder;
-	}
-
-	public float getAdductionLShoulder() {
-		return adductionLShoulder;
-	}
-
-	public float getAdductionRShoulder() {
-		return adductionRShoulder;
-	}
-
-	public float getAnteversionLShoulder() {
-		return anteversionLShoulder;
-	}
-
-	public float getAnteversionRShoulder() {
-		return anteversionRShoulder;
-	}
-
-	public float getRetroversionLShoulder() {
-		return retroversionLShoulder;
-	}
-
-	public float getRetroversionRShoulder() {
-		return retroversionRShoulder;
 	}
 
 	public float getSeconds() {

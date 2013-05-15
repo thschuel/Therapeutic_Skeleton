@@ -78,14 +78,20 @@ public class Skeleton {
 	
 	// stores skeleton Points in 3d Space, global coordsys
 	private PVector[] joint = new PVector[15]; 
+	private PVector[] jointUnmirrored = new PVector[15];
 	private float[] jointConfidence = new float[15];
+	private float[] jointConfidenceUnmirrored = new float[15];
 	// stores skeleton Points in 3d Space, local coordsys (neck is origin)
-	private PVector[] jointLCS = new PVector[15]; 
+	private PVector[] jointLCS = new PVector[15];
+	private PVector[] jointLCSUnmirrored = new PVector[15];
 	// stores joint orientation
 	private PMatrix3D[] jointOrientation = new PMatrix3D[15];
+	private PMatrix3D[] jointOrientationUnmirrored = new PMatrix3D[15];
 	private float[] jointOrientationConfidence = new float[15];
+	private float[] jointOrientationConfidenceUnmirrored = new float[15];
 	// stores distance of joints to last position of joints
 	private float[] jointDelta = new float[15];
+	private float[] jointDeltaUnmirrored = new float[15];
 	
 	// for convenience store vectors of upper arms and lower arms
 	private PVector lUpperArm = new PVector();
@@ -96,6 +102,14 @@ public class Skeleton {
 	private PVector lLowerArmLCS = new PVector();
 	private PVector rUpperArmLCS = new PVector();
 	private PVector rLowerArmLCS = new PVector();
+	private PVector lUpperArmUnmirrored = new PVector();
+	private PVector lLowerArmUnmirrored = new PVector();
+	private PVector rUpperArmUnmirrored = new PVector();
+	private PVector rLowerArmUnmirrored = new PVector();
+	private PVector lUpperArmLCSUnmirrored = new PVector();
+	private PVector lLowerArmLCSUnmirrored = new PVector();
+	private PVector rUpperArmLCSUnmirrored = new PVector();
+	private PVector rLowerArmLCSUnmirrored = new PVector();
 	
 	// setup variables
 	private boolean fullBodyTracking = true;
@@ -135,6 +149,10 @@ public class Skeleton {
 			jointLCS[i] = new PVector();
 			jointOrientation[i] = new PMatrix3D();
 			jointDelta[i] = 0f;
+			jointUnmirrored[i] = new PVector();
+			jointLCSUnmirrored[i] = new PVector();
+			jointOrientationUnmirrored[i] = new PMatrix3D();
+			jointDeltaUnmirrored[i] = 0f;
 		}
 		math = new SkeletonMath(this);
 	}
@@ -314,6 +332,14 @@ public class Skeleton {
 		if (jointType >= 0 && jointType <= 14) returnValue.set(joint[jointType]);
 		return returnValue;
 	}
+	/** This method returns the joint position of a certain joint in the global coordinate system. This method returns the unmirrored information, regardless of mirror therapy mode.
+	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
+	 *  @return The position of a certain joint in the global coordinate system as vector. If jointType out of range: 0-vector */
+	public PVector getJointUnmirrored (short jointType) {
+		PVector returnValue = new PVector();
+		if (jointType >= 0 && jointType <= 14) returnValue.set(jointUnmirrored[jointType]);
+		return returnValue;
+	}
 	/** This method returns the joint position of a certain joint on the kinect's projective plane. Z-value will be 0
 	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
 	 *  @return The position of a certain joint as vector on the projective plane of the kinect. If jointType out of range: 0-vector */
@@ -331,12 +357,30 @@ public class Skeleton {
 		if (jointType >= 0 && jointType <= 14) returnValue.set(jointLCS[jointType]);
 		return returnValue;
 	}
+	/** The positions of the joints are transformed to the local coordinate system of the skeleton if calculateLocalCoordSys was set. This method returns the unmirrored information, regardless of mirror therapy mode.
+	 *  This method returns the joint position of a certain joint in the local coordinate system. Works only if localCoordSysCalculated is true.
+	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
+	 *  @return The position of a certain joint in the local coordinate system as vector. If jointType out of range or if localCoordSys was not calculated: 0-vector */
+	public PVector getJointLCSUnmirrored (short jointType) {
+		PVector returnValue = new PVector();
+		if (jointType >= 0 && jointType <= 14) returnValue.set(jointLCSUnmirrored[jointType]);
+		return returnValue;
+	}
 	/** The positions of the joints are evaluated with a certain confidence value. This method returns the confidence value for a certain joint
 	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
 	 *  @return The confidence value of a certain joint. Between 0f and 1f. If jointType out of range: 0f */
 	public float getJointConfidence (short jointType) {
 		if (jointType >= 0 && jointType <= 14) 
 			return jointConfidence[jointType];
+		else
+			return 0f;
+	}
+	/** The positions of the joints are evaluated with a certain confidence value. This method returns the confidence value for a certain joint. This method returns the unmirrored information, regardless of mirror therapy mode.
+	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
+	 *  @return The confidence value of a certain joint. Between 0f and 1f. If jointType out of range: 0f */
+	public float getJointConfidenceUnmirrored (short jointType) {
+		if (jointType >= 0 && jointType <= 14) 
+			return jointConfidenceUnmirrored[jointType];
 		else
 			return 0f;
 	}
@@ -348,6 +392,14 @@ public class Skeleton {
 		if (jointType >= 0 && jointType <= 14) returnValue.set(jointOrientation[jointType]);
 		return returnValue;
 	}
+	/** The orientations of the joints are evaluated with a certain confidence value. This method returns the orientation matrix. This method returns the unmirrored information, regardless of mirror therapy mode.
+	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
+	 *  @return The orientation matrix of a certain joint. PMatrix3D. If jointType out of range: 0-Matrix */
+	public PMatrix3D getJointOrientationUnmirrored (short jointType) {
+		PMatrix3D returnValue = new PMatrix3D();
+		if (jointType >= 0 && jointType <= 14) returnValue.set(jointOrientationUnmirrored[jointType]);
+		return returnValue;
+	}
 	/** The orientations of the joints are evaluated with a certain confidence value. This method returns the confidence value 
 	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
 	 *  @return The confidence value for the evaluated orientation of a certain joint. Between 0f and 1f. If jointType out of range: 0f */
@@ -357,12 +409,30 @@ public class Skeleton {
 		else
 			return 0f;
 	}
+	/** The orientations of the joints are evaluated with a certain confidence value. This method returns the confidence value.  This method returns the unmirrored information, regardless of mirror therapy mode.
+	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
+	 *  @return The confidence value for the evaluated orientation of a certain joint. Between 0f and 1f. If jointType out of range: 0f */
+	public float getJointOrientationConfidenceUnmirrored (short jointType) {
+		if (jointType >= 0 && jointType <= 14) 
+			return jointOrientationConfidenceUnmirrored[jointType];
+		else
+			return 0f;
+	}
 	/** This method returns the delta of the current joint position to the last joint position, i.e. the distance, which the joint moved during the last frame
 	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
 	 *  @return The distance between the current joint position and the last joint position. */
 	public float getJointDelta (short jointType) {
 		if (jointType >= 0 && jointType <= 14) 
 			return jointDelta[jointType];
+		else
+			return 0f;
+	}
+	/** This method returns the delta of the current joint position to the last joint position, i.e. the distance, which the joint moved during the last frame. This method returns the unmirrored information, regardless of mirror therapy mode.
+	 *  @param jointType The joint for which confidence value should be returned. Should be a short value corresponding to Skeleton constants.
+	 *  @return The distance between the current joint position and the last joint position. */
+	public float getJointDeltaUnmirrored (short jointType) {
+		if (jointType >= 0 && jointType <= 14) 
+			return jointDeltaUnmirrored[jointType];
 		else
 			return 0f;
 	}
@@ -429,6 +499,62 @@ public class Skeleton {
 	public PVector getRightLowerArmLCS() {
 		PVector returnValue = new PVector();
 		returnValue.set(rLowerArmLCS);
+		return returnValue;
+	}
+	/** The vectors for lower and upper arms are calculated for convenience. This method returns the unmirrored arm vectors.
+	 *  @return The vector for the left upper arm */
+	public PVector getLeftUpperArmUnmirrored() {
+		PVector returnValue = new PVector();
+		returnValue.set(lUpperArmUnmirrored);
+		return returnValue;
+	}
+	/** The vectors for lower and upper arms are calculated for convenience.  This method returns the unmirrored arm vectors.
+	 *  @return The vector for the left lower arm */
+	public PVector getLeftLowerArmUnmirrored() {
+		PVector returnValue = new PVector();
+		returnValue.set(lLowerArmUnmirrored);
+		return returnValue;
+	}
+	/** The vectors for lower and upper arms are calculated for convenience.  This method returns the unmirrored arm vectors.
+	 *  @return The vector for the right upper arm */
+	public PVector getRightUpperArmUnmirrored() {
+		PVector returnValue = new PVector();
+		returnValue.set(rUpperArmUnmirrored);
+		return returnValue;
+	}
+	/** The vectors for lower and upper arms are calculated for convenience.  This method returns the unmirrored arm vectors.
+	 *  @return The vector for the right lower arm */
+	public PVector getRightLowerArmUnmirrored() {
+		PVector returnValue = new PVector();
+		returnValue.set(rLowerArmUnmirrored);
+		return returnValue;
+	}
+	/** The vectors for the lower and upper arms are calculated for convenience. This method returns the unmirrored arm vectors.
+	 *  @return The vector for the left upper arm in the local coordinate system.*/
+	public PVector getLeftUpperArmLCSUnmirrored() {
+		PVector returnValue = new PVector();
+		returnValue.set(lUpperArmLCSUnmirrored);
+		return returnValue;
+	}
+	/** The vectors for the lower and upper arms are calculated for convenience.  This method returns the unmirrored arm vectors.
+	 *  @return The vector for the left lower arm in the local coordinate system.  */
+	public PVector getRightUpperArmLCSUnmirrored() {
+		PVector returnValue = new PVector();
+		returnValue.set(rUpperArmLCSUnmirrored);
+		return returnValue;
+	}
+	/** The vectors for the lower and upper arms are calculated for convenience.  This method returns the unmirrored arm vectors.
+	 *  @return The vector for the right upper arm in the local coordinate system.  */
+	public PVector getLeftLowerArmLCSUnmirrored() {
+		PVector returnValue = new PVector();
+		returnValue.set(lLowerArmLCSUnmirrored);
+		return returnValue;
+	}
+	/** The vectors for the lower and upper arms are calculated for convenience.  This method returns the unmirrored arm vectors.
+	 *  @return The vector for the right lower arm in the local coordinate system.  */
+	public PVector getRightLowerArmLCSUnmirrored() {
+		PVector returnValue = new PVector();
+		returnValue.set(rLowerArmLCSUnmirrored);
 		return returnValue;
 	}
 	
@@ -537,6 +663,26 @@ public class Skeleton {
 	 *  @return The angle between the right lower Arm and the right upper arm. */
 	public float getAngleRightLowerArm() {
 		return PVector.angleBetween(rLowerArmLCS,rUpperArmLCS);
+	}
+	/** The angle between the left upper Arm and the body axis. Is calculated in the local coordinate system! This method uses the unmirrored arm vectors.
+	 *  @return The angle between the left upper Arm and the body axis.*/
+	public float getAngleLeftUpperArmUnmirrored() {
+		return PVector.angleBetween(lUpperArmLCSUnmirrored,getOrientationY());
+	}
+	/** The angle between the left lower Arm and the left upper arm.  Is calculated in the local coordinate system! This method uses the unmirrored arm vectors.
+	 *  @return The angle between the left lower Arm and the left upper arm.*/
+	public float getAngleLeftLowerArmUnmirrored() {
+		return PVector.angleBetween(lLowerArmLCSUnmirrored,lUpperArmLCSUnmirrored);
+	}
+	/** The angle between the right upper Arm and the body axis.  Is calculated in the local coordinate system! This method uses the unmirrored arm vectors.
+	 *  @return The angle between the right upper Arm and the body axis. */
+	public float getAngleRightUpperArmUnmirrored() {
+		return PVector.angleBetween(rUpperArmLCSUnmirrored,getOrientationY());
+	}
+	/** The angle between the right lower Arm and the right upper arm.  Is calculated in the local coordinate system! This method uses the unmirrored arm vectors.
+	 *  @return The angle between the right lower Arm and the right upper arm. */
+	public float getAngleRightLowerArmUnmirrored() {
+		return PVector.angleBetween(rLowerArmLCSUnmirrored,rUpperArmLCSUnmirrored);
 	}
 	
 	// -----------------------------------------------------------------
@@ -939,6 +1085,18 @@ public class Skeleton {
 		rUpperArm = PVector.sub(joint[RIGHT_ELBOW],joint[RIGHT_SHOULDER]);
 		lLowerArm = PVector.sub(joint[LEFT_HAND],joint[LEFT_ELBOW]);
 		rLowerArm = PVector.sub(joint[RIGHT_HAND],joint[RIGHT_ELBOW]);
+		
+		// store original joint information before mirroring takes place on data storage.
+		for (int i=0; i<15; i++) {
+			jointUnmirrored[i] = joint[i];
+			jointDeltaUnmirrored[i] = jointDelta[i];
+			jointConfidenceUnmirrored[i] = jointConfidence[i];
+		}
+		lUpperArmUnmirrored = lUpperArm;
+		rUpperArmUnmirrored = rUpperArm;
+		lLowerArmUnmirrored = lLowerArm;
+		rLowerArmUnmirrored = rLowerArm;
+		
 	}
 	private void updateJointOrientations () {
 		jointOrientationConfidence[HEAD] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_HEAD,jointOrientation[HEAD]);
@@ -958,6 +1116,12 @@ public class Skeleton {
 			jointOrientationConfidence[RIGHT_KNEE] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_KNEE,jointOrientation[RIGHT_KNEE]);
 			jointOrientationConfidence[RIGHT_FOOT] = kinect.getJointOrientationSkeleton(userId,SimpleOpenNI.SKEL_RIGHT_FOOT,jointOrientation[RIGHT_FOOT]);
 		}
+		
+		// store original joint information before mirroring takes place on data storage.
+		for (int i=0; i<15; i++) {
+			jointOrientationUnmirrored[i] = jointOrientation[i];
+			jointOrientationConfidenceUnmirrored[i] = jointOrientationConfidence[i];
+		}
 	}
 	
 	private void updateMirroredJointPositions () {
@@ -971,6 +1135,9 @@ public class Skeleton {
 				joint[RIGHT_HAND].set(math.mirrorJointVector(joint[LEFT_HAND]));
 				jointDelta[RIGHT_HAND] = jointDelta[LEFT_HAND];
 				jointConfidence[RIGHT_HAND] = jointConfidence[LEFT_HAND];
+				// update arm vectors
+				rUpperArm = PVector.sub(joint[RIGHT_ELBOW],joint[RIGHT_SHOULDER]);
+				rLowerArm = PVector.sub(joint[RIGHT_HAND],joint[RIGHT_ELBOW]);
 				break;
 			case MIRROR_THERAPY_RIGHT:
 				// mirror right elbow to left elbow
@@ -981,6 +1148,9 @@ public class Skeleton {
 				joint[LEFT_HAND].set(math.mirrorJointVector(joint[RIGHT_HAND]));
 				jointDelta[LEFT_HAND] = jointDelta[RIGHT_HAND];
 				jointConfidence[LEFT_HAND] = jointConfidence[RIGHT_HAND];
+				// update arm vectors
+				lUpperArm = PVector.sub(joint[LEFT_ELBOW],joint[LEFT_SHOULDER]);
+				lLowerArm = PVector.sub(joint[LEFT_HAND],joint[LEFT_ELBOW]);
 				break;
 		}
 	}
@@ -1032,6 +1202,29 @@ public class Skeleton {
 		rUpperArmLCS = PVector.sub(jointLCS[RIGHT_ELBOW],jointLCS[RIGHT_SHOULDER]);
 		lLowerArmLCS = PVector.sub(jointLCS[LEFT_HAND],jointLCS[LEFT_ELBOW]);
 		rLowerArmLCS = PVector.sub(jointLCS[RIGHT_HAND],jointLCS[RIGHT_ELBOW]);
+
+		lUpperArmLCSUnmirrored = lUpperArmLCS;
+		rUpperArmLCSUnmirrored = rUpperArmLCS;
+		lLowerArmLCSUnmirrored = lLowerArmLCS;
+		rLowerArmLCSUnmirrored = rLowerArmLCS;
+		
+		// calculate lcs for original joints
+		for (int i=0; i<15; i++) {
+			if (mirrorTherapy == MIRROR_THERAPY_LEFT && (i == RIGHT_ELBOW || i == RIGHT_HAND)) {
+				jointLCSUnmirrored[i] = math.getJointLCS(jointUnmirrored[i]);
+			} else if (mirrorTherapy == MIRROR_THERAPY_RIGHT && (i == LEFT_ELBOW || i == LEFT_HAND)) {
+				jointLCSUnmirrored[i] = math.getJointLCS(jointUnmirrored[i]);
+			} else {
+				jointLCSUnmirrored[i] = jointLCS[i];
+			}
+		}
+		if (mirrorTherapy == MIRROR_THERAPY_RIGHT) {
+			lUpperArmLCSUnmirrored = PVector.sub(jointLCSUnmirrored[LEFT_ELBOW],jointLCSUnmirrored[LEFT_SHOULDER]);
+			lLowerArmLCSUnmirrored = PVector.sub(jointLCSUnmirrored[LEFT_HAND],jointLCSUnmirrored[LEFT_ELBOW]);
+		} else if (mirrorTherapy == MIRROR_THERAPY_LEFT) {
+			rUpperArmLCSUnmirrored = PVector.sub(jointLCSUnmirrored[RIGHT_ELBOW],jointLCSUnmirrored[RIGHT_SHOULDER]);
+			rLowerArmLCSUnmirrored = PVector.sub(jointLCSUnmirrored[RIGHT_HAND],jointLCSUnmirrored[RIGHT_ELBOW]);
+		}
 	}
 }
 	
